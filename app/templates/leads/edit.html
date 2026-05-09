@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ lead.nama }}{% endblock %}
+{% block topbar_title %}Edit Lead — {{ lead.nama }}{% endblock %}
+
+{% block content %}
+<div style="max-width:640px">
+<div class="card">
+  <form method="POST">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group">
+        <label class="form-label">Nama</label>
+        <input class="form-control" name="nama" value="{{ lead.nama }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp</label>
+        <input class="form-control" name="no_wa" value="{{ lead.no_wa }}" required>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group">
+        <label class="form-label">Jenis Naskah</label>
+        <select class="form-control" name="jenis_naskah">
+          {% for opt in ['Disertasi','Tesis','Monograf','KTI','Lainnya'] %}
+          <option {% if lead.jenis_naskah==opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tujuan</label>
+        <select class="form-control" name="tujuan">
+          {% for opt in ['BKD','Jabfung','Keduanya','Pribadi'] %}
+          <option {% if lead.tujuan==opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group">
+        <label class="form-label">Paket</label>
+        <select class="form-control" name="paket">
+          <option value="">— pilih —</option>
+          {% for p in paket_list %}
+          <option {% if lead.paket==p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deadline Klien</label>
+        <input class="form-control" name="deadline_klien" value="{{ lead.deadline_klien or '' }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Asal Iklan</label>
+      <select class="form-control" name="asal_iklan">
+        {% for opt in ['Meta Ads','CTWA - Meta Ads','Referral','Organik','Lainnya'] %}
+        <option {% if lead.asal_iklan==opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Catatan</label>
+      <textarea class="form-control" name="catatan">{{ lead.catatan or '' }}</textarea>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+      <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="btn btn-secondary">Batal</a>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}

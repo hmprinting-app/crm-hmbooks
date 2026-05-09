@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}CRM{% endblock %} — HM Books Pustaka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#1a1a1a;font-size:14px}
+a{text-decoration:none;color:inherit}
+
+/* Sidebar */
+.sidebar{position:fixed;top:0;left:0;width:220px;height:100vh;background:#fff;border-right:1px solid #e8e8e8;display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid #e8e8e8}
+.sidebar-logo .brand{font-size:15px;font-weight:600;color:#1a1a1a}
+.sidebar-logo .sub{font-size:11px;color:#888;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-section{padding:8px 16px 4px;font-size:10px;font-weight:600;color:#aaa;letter-spacing:.06em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;color:#555;font-size:13px;border-radius:0;transition:background .15s,color .15s;cursor:pointer}
+.nav-item:hover{background:#f5f5f5;color:#1a1a1a}
+.nav-item.active{background:#f0f9f4;color:#0a7c4a;font-weight:500}
+.nav-item .icon{font-size:16px;width:18px;text-align:center}
+.sidebar-footer{padding:16px;border-top:1px solid #e8e8e8;font-size:12px;color:#888}
+
+/* Main */
+.main{margin-left:220px;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e8e8e8;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.content{padding:24px 28px}
+
+/* Cards */
+.card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:20px}
+.card-sm{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px 16px}
+
+/* Metric cards */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.metric-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:18px 20px}
+.metric-label{font-size:12px;color:#888;margin-bottom:8px}
+.metric-val{font-size:24px;font-weight:600;color:#1a1a1a}
+.metric-sub{font-size:12px;color:#aaa;margin-top:4px}
+.metric-up{color:#0a7c4a}
+.metric-warn{color:#d97706}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.btn-primary{background:#0a7c4a;color:#fff;border-color:#0a7c4a}
+.btn-primary:hover{background:#086b3f}
+.btn-secondary{background:#fff;color:#555;border-color:#ddd}
+.btn-secondary:hover{background:#f5f5f5}
+.btn-danger{background:#fff;color:#dc2626;border-color:#fca5a5}
+.btn-danger:hover{background:#fef2f2}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Badges / Stage */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-new{background:#dbeafe;color:#1e40af}
+.badge-qualify{background:#dcfce7;color:#166534}
+.badge-paket{background:#fef9c3;color:#854d0e}
+.badge-invoice{background:#fed7aa;color:#9a3412}
+.badge-dp{background:#fce7f3;color:#9d174d}
+.badge-produksi{background:#d1fae5;color:#065f46}
+.badge-selesai{background:#ede9fe;color:#4c1d95}
+.badge-lost{background:#f1f5f9;color:#64748b}
+
+/* Table */
+.table-wrap{background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:#f9fafb}
+th{padding:10px 14px;text-align:left;font-weight:500;color:#555;font-size:12px;border-bottom:1px solid #e8e8e8}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;color:#333}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+
+/* Forms */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:500;color:#555;margin-bottom:6px}
+.form-control{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:7px;font-size:13px;outline:none;transition:border-color .15s}
+.form-control:focus{border-color:#0a7c4a;box-shadow:0 0 0 2px rgba(10,124,74,.1)}
+select.form-control{background:#fff}
+textarea.form-control{resize:vertical;min-height:80px}
+
+/* Alert flash */
+.flash{padding:10px 16px;border-radius:7px;font-size:13px;margin-bottom:16px}
+.flash-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.flash-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+
+/* Pipeline kanban */
+.kanban-board{display:grid;grid-template-columns:repeat(7,minmax(160px,1fr));gap:12px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{background:#f9fafb;border:1px solid #e8e8e8;border-radius:10px;padding:12px}
+.kanban-col-header{font-size:12px;font-weight:600;color:#555;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kanban-count{background:#e8e8e8;color:#555;font-size:11px;padding:2px 7px;border-radius:20px}
+.kanban-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s}
+.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.kanban-card .nama{font-weight:500;font-size:13px;color:#1a1a1a;margin-bottom:4px}
+.kanban-card .sub{font-size:11px;color:#888}
+.kanban-card .paket{font-size:11px;color:#0a7c4a;font-weight:500;margin-top:4px}
+
+/* FU status */
+.fu-hot{color:#dc2626;font-weight:500}
+.fu-warm{color:#d97706;font-weight:500}
+.fu-cold{color:#6b7280}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .kanban-board{grid-template-columns:repeat(3,160px)}
+}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div style="width:32px;height:32px;background:#0a7c4a;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px">
+      <span style="color:#fff;font-weight:700;font-size:14px">HB</span>
+    </div>
+    <div class="brand">HM Books Pustaka</div>
+    <div class="sub">CRM System</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Menu Utama</div>
+    <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.endpoint=='dashboard.index' %}active{% endif %}">
+      <span class="icon">📊</span> Dashboard
+    </a>
+    <a href="{{ url_for('leads.index') }}" class="nav-item {% if 'leads' in request.endpoint %}active{% endif %}">
+      <span class="icon">👥</span> Leads
+    </a>
+    <a href="{{ url_for('pipeline.index') }}" class="nav-item {% if 'pipeline' in request.endpoint %}active{% endif %}">
+      <span class="icon">📋</span> Pipeline
+    </a>
+    <a href="{{ url_for('followup.index') }}" class="nav-item {% if 'followup' in request.endpoint %}active{% endif %}">
+      <span class="icon">📱</span> Follow-up WA
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="font-weight:500;color:#333;margin-bottom:4px">{{ current_user.name }}</div>
+    <a href="{{ url_for('auth.logout') }}" style="color:#888;font-size:12px">Logout</a>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">{% block topbar_title %}{% endblock %}</div>
+    <div class="topbar-actions">{% block topbar_actions %}{% endblock %}</div>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+</body>
+</html>

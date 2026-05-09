@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.nama }}{% endblock %}
+{% block topbar_title %}Detail Lead — {{ lead.nama }}{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('leads.edit', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+<a href="{{ url_for('leads.index') }}" class="btn btn-secondary btn-sm">← Kembali</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
+
+  <!-- Kiri: info + update stage -->
+  <div>
+    <!-- Stage progress -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px">Stage Progress</div>
+      <div style="display:flex;gap:4px;overflow-x:auto">
+        {% for s in stages %}
+        {% set active = lead.stage_index >= loop.index0 %}
+        <div style="flex:1;min-width:80px;text-align:center">
+          <div style="height:4px;border-radius:2px;background:{% if active %}#0a7c4a{% else %}#e8e8e8{% endif %};margin-bottom:6px"></div>
+          <div style="font-size:10px;color:{% if lead.stage==s %}#0a7c4a{% else %}#aaa{% endif %};font-weight:{% if lead.stage==s %}600{% else %}400{% endif %}">{{ s }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Update stage form -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px">Update Stage</div>
+      <form method="POST" action="{{ url_for('leads.update_stage', lead_id=lead.id) }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:160px">
+          <select class="form-control" name="stage">
+            {% for s in stages %}
+            <option {% if lead.stage==s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <select class="form-control" name="paket">
+            <option value="">Paket (opsional)</option>
+            {% for p in paket_list %}
+            <option {% if lead.paket==p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Update</button>
+      </form>
+    </div>
+
+    <!-- Data lead -->
+    <div class="card">
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:14px">Informasi Lead</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse">
+        {% macro row(label, val) %}
+        <tr><td style="color:#888;padding:7px 0;width:140px">{{ label }}</td><td style="color:#1a1a1a;font-weight:500">{{ val or '—' }}</td></tr>
+        {% endmacro %}
+        {{ row('ID', lead.id) }}
+        {{ row('No WA', lead.no_wa) }}
+        {{ row('Jenis Naskah', lead.jenis_naskah) }}
+        {{ row('Tujuan', lead.tujuan) }}
+        {{ row('Deadline Klien', lead.deadline_klien) }}
+        {{ row('Asal Iklan', lead.asal_iklan) }}
+        {{ row('Paket', lead.paket) }}
+        {{ row('Harga', 'Rp ' + "{:,.0f}".format(lead.harga).replace(",",".") if lead.harga else '—') }}
+        {{ row('PIC', lead.pic.name if lead.pic else '—') }}
+        {{ row('Masuk', lead.created_at.strftime('%d %b %Y %H:%M')) }}
+      </table>
+      {% if lead.catatan %}
+      <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:7px;font-size:13px;color:#555">
+        <div style="font-size:11px;color:#aaa;margin-bottom:4px">Catatan</div>
+        {{ lead.catatan }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Kanan: FU schedule -->
+  <div>
+    <div class="card">
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px">Jadwal Follow-up</div>
+      {% for fu in lead.fu_records|sort(attribute='fu_ke') %}
+      <div style="border:1px solid {% if fu.status=='Terkirim' %}#a7f3d0{% elif fu.terlambat %}#fca5a5{% else %}#e8e8e8{% endif %};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:600;color:#1a1a1a">FU-{{ fu.fu_ke }} {{ fu.label_hari }}</div>
+          <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:{% if fu.status=='Terkirim' %}#d1fae5;color:#065f46{% elif fu.terlambat %}#fee2e2;color:#991b1b{% else %}#f0f0f0;color:#888{% endif %}">
+            {{ fu.status }}{% if fu.terlambat %} ⚠{% endif %}
+          </span>
+        </div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px">{{ fu.jadwal_kirim.strftime('%d %b %Y') }}</div>
+        {% if fu.status == 'Pending' %}
+        <form method="POST" action="{{ url_for('followup.kirim', fu_id=fu.id) }}" style="display:inline">
+          <button type="submit" class="btn btn-primary btn-sm">Kirim WA</button>
+        </form>
+        <form method="POST" action="{{ url_for('followup.batalkan', fu_id=fu.id) }}" style="display:inline;margin-left:4px">
+          <button type="submit" class="btn btn-danger btn-sm">Batalkan</button>
+        </form>
+        {% elif fu.waktu_kirim %}
+        <div style="font-size:11px;color:#0a7c4a">✓ {{ fu.waktu_kirim.strftime('%d %b %Y %H:%M') }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Quick WA link -->
+    <div class="card-sm" style="margin-top:12px;background:#f0f9f4">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">Buka di WhatsApp</div>
+      <a href="https://wa.me/{{ lead.no_wa }}" target="_blank" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">
+        💬 Chat {{ lead.nama }}
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

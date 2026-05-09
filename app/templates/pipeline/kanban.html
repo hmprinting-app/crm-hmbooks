@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Pipeline{% endblock %}
+{% block topbar_title %}Pipeline Kanban{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('leads.tambah') }}" class="btn btn-primary">+ Tambah Lead</a>
+{% endblock %}
+
+{% block content %}
+<div class="kanban-board">
+{% set stage_icons = {
+  'New Lead':'🔵','Qualify':'🟢','Paket Dipilih':'🟡','Invoice Terkirim':'🟠',
+  'DP Masuk':'🔴','Produksi':'✅','Selesai':'🏆','Lost':'❌'
+} %}
+{% for s in stages %}
+{% set leads_in_stage = kanban.get(s, []) %}
+<div class="kanban-col">
+  <div class="kanban-col-header">
+    <span>{{ stage_icons.get(s,'') }} {{ s }}</span>
+    <span class="kanban-count">{{ leads_in_stage|length }}</span>
+  </div>
+  {% for lead in leads_in_stage %}
+  <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" style="display:block">
+    <div class="kanban-card">
+      <div class="nama">{{ lead.nama }}</div>
+      <div class="sub">{{ lead.no_wa }}</div>
+      {% if lead.jenis_naskah %}<div class="sub">{{ lead.jenis_naskah }}</div>{% endif %}
+      {% if lead.paket %}<div class="paket">{{ lead.paket }} · Rp {{ "{:,.0f}".format(lead.harga).replace(",",".") }}</div>{% endif %}
+      {% if lead.fu_berikutnya %}
+      <div style="margin-top:6px;font-size:10px;color:{% if lead.fu_berikutnya.terlambat %}#dc2626{% else %}#d97706{% endif %}">
+        ⏰ FU {{ lead.fu_berikutnya.label_hari }}
+      </div>
+      {% endif %}
+    </div>
+  </a>
+  {% else %}
+  <div style="color:#ccc;font-size:12px;text-align:center;padding:16px 0">kosong</div>
+  {% endfor %}
+</div>
+{% endfor %}
+</div>
+{% endblock %}

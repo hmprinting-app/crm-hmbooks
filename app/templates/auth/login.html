@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login — HM Books Pustaka CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0f9f4;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:#fff;border:1px solid #e8e8e8;border-radius:14px;padding:36px 40px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.logo{width:44px;height:44px;background:#0a7c4a;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.logo span{color:#fff;font-weight:700;font-size:18px}
+h1{text-align:center;font-size:18px;font-weight:600;margin-bottom:4px}
+.sub{text-align:center;font-size:13px;color:#888;margin-bottom:28px}
+.form-group{margin-bottom:16px}
+label{display:block;font-size:12px;font-weight:500;color:#555;margin-bottom:6px}
+input{width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-family:inherit}
+input:focus{border-color:#0a7c4a;box-shadow:0 0 0 3px rgba(10,124,74,.1)}
+.btn{width:100%;padding:11px;background:#0a7c4a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px}
+.btn:hover{background:#086b3f}
+.flash{padding:10px 14px;border-radius:7px;font-size:13px;margin-bottom:16px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="logo"><span>HB</span></div>
+  <h1>HM Books Pustaka</h1>
+  <p class="sub">CRM System — Masuk ke akun admin</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  <form method="POST">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" name="email" placeholder="admin@hmbooks.id" required>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" required>
+    </div>
+    <button type="submit" class="btn">Masuk</button>
+  </form>
+</div>
+</body>
+</html>

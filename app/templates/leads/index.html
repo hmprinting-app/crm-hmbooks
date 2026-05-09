@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Leads{% endblock %}
+{% block topbar_title %}Leads{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('leads.tambah') }}" class="btn btn-primary">+ Tambah Lead</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filter bar -->
+<div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+  <form method="GET" style="display:flex;gap:8px;flex:1;max-width:500px">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Cari nama atau nomor WA..." style="flex:1">
+    <button type="submit" class="btn btn-secondary">Cari</button>
+  </form>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <a href="{{ url_for('leads.index') }}" class="btn btn-sm {% if not stage_filter %}btn-primary{% else %}btn-secondary{% endif %}">Semua</a>
+    {% for s in stages %}
+    <a href="{{ url_for('leads.index', stage=s) }}" class="btn btn-sm {% if stage_filter==s %}btn-primary{% else %}btn-secondary{% endif %}">{{ s }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>ID</th><th>Nama</th><th>No WA</th><th>Naskah</th><th>Tujuan</th><th>Stage</th><th>Paket</th><th>FU Berikutnya</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for lead in leads %}
+    {% set stage_cls = lead.stage.lower().replace(' ','-') %}
+    <tr>
+      <td style="font-size:11px;color:#888;font-family:monospace">{{ lead.id }}</td>
+      <td style="font-weight:500">
+        <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" style="color:#1a1a1a">{{ lead.nama }}</a>
+      </td>
+      <td style="font-family:monospace;font-size:12px">{{ lead.no_wa }}</td>
+      <td>{{ lead.jenis_naskah or '—' }}</td>
+      <td>{{ lead.tujuan or '—' }}</td>
+      <td><span class="badge badge-{{ stage_cls }}">{{ lead.stage }}</span></td>
+      <td>
+        {% if lead.paket %}
+          <span style="font-size:12px;color:#0a7c4a;font-weight:500">{{ lead.paket }}</span>
+          <div style="font-size:11px;color:#888">Rp {{ "{:,.0f}".format(lead.harga).replace(",",".") }}</div>
+        {% else %}—{% endif %}
+      </td>
+      <td>
+        {% if lead.fu_berikutnya %}
+          <span class="{% if lead.fu_berikutnya.terlambat %}fu-hot{% else %}fu-warm{% endif %}">
+            {{ lead.fu_berikutnya.label_hari }}<br>
+            <span style="font-size:11px">{{ lead.fu_berikutnya.jadwal_kirim.strftime('%d %b %Y') }}</span>
+          </span>
+        {% else %}<span style="color:#aaa">—</span>{% endif %}
+      </td>
+      <td>
+        <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">Detail</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" style="text-align:center;color:#888;padding:32px">
+      Tidak ada leads{% if stage_filter %} dengan stage "{{ stage_filter }}"{% endif %}.
+      <a href="{{ url_for('leads.tambah') }}" style="color:#0a7c4a">Tambah lead baru →</a>
+    </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

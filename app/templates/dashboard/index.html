@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('leads.tambah') }}" class="btn btn-primary">+ Tambah Lead</a>
+{% endblock %}
+
+{% block content %}
+<!-- Metric cards -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-label">Total Leads Aktif</div>
+    <div class="metric-val">{{ total_leads }}</div>
+    <div class="metric-sub">semua stage</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Conversion Rate</div>
+    <div class="metric-val">{{ conv_rate }}%</div>
+    <div class="metric-sub">closing / total leads</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Revenue Pipeline</div>
+    <div class="metric-val">Rp {{ "{:,.0f}".format(revenue_pipe).replace(",",".") }}</div>
+    <div class="metric-sub">estimasi pending</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">FU Hari Ini</div>
+    <div class="metric-val {% if fu_hari_ini > 0 %}metric-warn{% endif %}">{{ fu_hari_ini }}</div>
+    <div class="metric-sub">
+      {% if fu_terlambat > 0 %}<span class="fu-hot">⚠ {{ fu_terlambat }} terlambat</span>{% else %}on track{% endif %}
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+  <!-- Pipeline summary -->
+  <div class="card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:16px">Pipeline Stages</div>
+    {% set colors = {'New Lead':'#dbeafe','Qualify':'#dcfce7','Paket Dipilih':'#fef9c3','Invoice Terkirim':'#fed7aa','DP Masuk':'#fce7f3','Produksi':'#d1fae5','Selesai':'#ede9fe','Lost':'#f1f5f9'} %}
+    {% for s in stages %}
+    {% set cnt = stage_counts.get(s, 0) %}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:110px;font-size:12px;color:#555">{{ s }}</div>
+      <div style="flex:1;background:#f0f0f0;border-radius:4px;height:22px;overflow:hidden">
+        <div style="height:100%;width:{{ [cnt * 10, 100]|min }}%;background:{{ colors.get(s,'#e8e8e8') }};border-radius:4px;display:flex;align-items:center;padding-left:8px">
+          {% if cnt > 0 %}<span style="font-size:11px;font-weight:600;color:#555">{{ cnt }}</span>{% endif %}
+        </div>
+      </div>
+      <div style="width:24px;text-align:right;font-size:12px;color:#888">{{ cnt }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- FU pending -->
+  <div class="card" style="padding:16px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px">Follow-up Pending</div>
+    {% if fu_pending %}
+      {% for fu in fu_pending %}
+      <div style="border:1px solid #e8e8e8;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:500">{{ fu.lead.nama }}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">{{ fu.label_hari }} — {{ fu.jadwal_kirim.strftime('%d %b') }}</div>
+        <a href="{{ url_for('followup.index') }}" style="font-size:11px;color:#0a7c4a;font-weight:500">Kirim sekarang →</a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="color:#888;font-size:13px">Tidak ada FU pending ✅</div>
+    {% endif %}
+    <a href="{{ url_for('followup.index') }}" class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%;justify-content:center">Lihat semua FU</a>
+  </div>
+</div>
+
+<!-- Recent leads -->
+<div class="table-wrap" style="margin-top:20px">
+  <div style="padding:14px 16px;border-bottom:1px solid #e8e8e8;font-size:13px;font-weight:600">
+    Leads Terbaru
+    <a href="{{ url_for('leads.index') }}" style="font-size:12px;color:#0a7c4a;font-weight:400;margin-left:12px">Lihat semua →</a>
+  </div>
+  <table>
+    <thead><tr>
+      <th>ID</th><th>Nama</th><th>No WA</th><th>Naskah</th><th>Stage</th><th>Paket</th><th>FU Berikutnya</th>
+    </tr></thead>
+    <tbody>
+    {% for lead in recent_leads %}
+    {% set stage_cls = lead.stage.lower().replace(' ','-') %}
+    <tr onclick="location.href='{{ url_for('leads.detail', lead_id=lead.id) }}'" style="cursor:pointer">
+      <td style="font-size:11px;color:#888;font-family:monospace">{{ lead.id }}</td>
+      <td style="font-weight:500">{{ lead.nama }}</td>
+      <td style="font-family:monospace;font-size:12px">{{ lead.no_wa }}</td>
+      <td>{{ lead.jenis_naskah or '—' }}</td>
+      <td>
+        <span class="badge badge-{{ stage_cls }}">{{ lead.stage }}</span>
+      </td>
+      <td>{{ lead.paket or '—' }}</td>
+      <td>
+        {% if lead.fu_berikutnya %}
+          <span class="{% if lead.fu_berikutnya.terlambat %}fu-hot{% else %}fu-warm{% endif %}">
+            {{ lead.fu_berikutnya.label_hari }} ({{ lead.fu_berikutnya.jadwal_kirim.strftime('%d %b') }})
+          </span>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="text-align:center;color:#888;padding:24px">Belum ada leads. <a href="{{ url_for('leads.tambah') }}" style="color:#0a7c4a">Tambah sekarang →</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

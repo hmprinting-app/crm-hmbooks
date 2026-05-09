@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Follow-up WA{% endblock %}
+{% block topbar_title %}Follow-up WhatsApp{% endblock %}
+{% block topbar_actions %}
+<form method="POST" action="{{ url_for('followup.blast_hari_ini') }}">
+  <button type="submit" class="btn btn-primary" onclick="return confirm('Kirim semua FU hari ini via Fonnte?')">
+    📤 Blast FU Hari Ini
+  </button>
+</form>
+{% endblock %}
+
+{% block content %}
+<!-- Pending & terlambat -->
+<div style="font-size:13px;font-weight:600;margin-bottom:12px">
+  Perlu Dikirim Sekarang
+  {% if pending %}<span style="background:#fee2e2;color:#991b1b;font-size:11px;padding:2px 8px;border-radius:20px;margin-left:8px">{{ pending|length }}</span>{% endif %}
+</div>
+
+{% if pending %}
+<div class="table-wrap" style="margin-bottom:24px">
+<table>
+  <thead><tr>
+    <th>Lead</th><th>No WA</th><th>FU</th><th>Jadwal</th><th>Pesan (preview)</th><th>Aksi</th>
+  </tr></thead>
+  <tbody>
+  {% for fu in pending %}
+  <tr>
+    <td style="font-weight:500">
+      <a href="{{ url_for('leads.detail', lead_id=fu.lead_id) }}" style="color:#1a1a1a">{{ fu.lead.nama }}</a>
+    </td>
+    <td style="font-family:monospace;font-size:12px">{{ fu.lead.no_wa }}</td>
+    <td>
+      <span style="font-weight:600;color:{% if fu.terlambat %}#dc2626{% else %}#d97706{% endif %}">
+        FU-{{ fu.fu_ke }} {{ fu.label_hari }}
+      </span>
+      {% if fu.terlambat %}<div style="font-size:10px;color:#dc2626">⚠ terlambat</div>{% endif %}
+    </td>
+    <td style="font-size:12px">{{ fu.jadwal_kirim.strftime('%d %b %Y') }}</td>
+    <td style="max-width:200px">
+      <div style="font-size:12px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        {{ fu.pesan[:80] }}...
+      </div>
+    </td>
+    <td>
+      <form method="POST" action="{{ url_for('followup.kirim', fu_id=fu.id) }}" style="display:inline">
+        <button type="submit" class="btn btn-primary btn-sm">Kirim WA</button>
+      </form>
+      <form method="POST" action="{{ url_for('followup.batalkan', fu_id=fu.id) }}" style="display:inline;margin-left:4px">
+        <button type="submit" class="btn btn-danger btn-sm">✕</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div style="background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:24px">
+  ✅ Tidak ada FU yang perlu dikirim hari ini.
+</div>
+{% endif %}
+
+<!-- Mendatang -->
+<div style="font-size:13px;font-weight:600;margin-bottom:12px;color:#555">Jadwal Mendatang</div>
+{% if mendatang %}
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th>Lead</th><th>No WA</th><th>FU</th><th>Jadwal</th>
+  </tr></thead>
+  <tbody>
+  {% for fu in mendatang %}
+  <tr>
+    <td><a href="{{ url_for('leads.detail', lead_id=fu.lead_id) }}" style="color:#1a1a1a">{{ fu.lead.nama }}</a></td>
+    <td style="font-family:monospace;font-size:12px">{{ fu.lead.no_wa }}</td>
+    <td style="color:#888">FU-{{ fu.fu_ke }} {{ fu.label_hari }}</td>
+    <td style="font-size:12px">{{ fu.jadwal_kirim.strftime('%d %b %Y') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div style="color:#aaa;font-size:13px">Tidak ada jadwal FU mendatang.</div>
+{% endif %}
+{% endblock %}
