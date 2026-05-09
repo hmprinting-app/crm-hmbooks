@@ -1,113 +1,156 @@
 {% extends "base.html" %}
 {% block title %}{{ lead.nama }}{% endblock %}
-{% block topbar_title %}Detail Lead — {{ lead.nama }}{% endblock %}
+{% block topbar_title %}Detail Lead{% endblock %}
 {% block topbar_actions %}
-<a href="{{ url_for('leads.edit', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+<a href="{{ url_for('leads.edit', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">✏ Edit</a>
 <a href="{{ url_for('leads.index') }}" class="btn btn-secondary btn-sm">← Kembali</a>
 {% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
 
-  <!-- Kiri: info + update stage -->
-  <div>
-    <!-- Stage progress -->
-    <div class="card" style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px">Stage Progress</div>
-      <div style="display:flex;gap:4px;overflow-x:auto">
+<!-- Lead Header -->
+<div class="card" style="margin-bottom:18px;padding:18px 22px">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div style="width:48px;height:48px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green);flex-shrink:0">
+      {{ lead.nama[0]|upper }}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:18px;font-weight:700;color:var(--text);line-height:1.2">{{ lead.nama }}</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:5px;flex-wrap:wrap">
+        <span style="font-size:13px;color:var(--text-2);font-family:monospace">{{ lead.no_wa }}</span>
+        <span class="badge badge-{{ lead.stage.lower().replace(' ','-') }}">{{ lead.stage }}</span>
+        {% if lead.paket %}
+        <span style="font-size:12px;color:var(--green);font-weight:600;background:var(--green-light);padding:2px 10px;border-radius:20px">{{ lead.paket }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <a href="https://wa.me/{{ lead.no_wa }}" target="_blank" class="btn btn-primary btn-sm">
+      💬 Buka WA
+    </a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:18px">
+
+  <!-- Kiri -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Stage Progress -->
+    <div class="card" style="padding:18px 20px">
+      <div class="page-section-title" style="margin-bottom:14px">Stage Progress</div>
+      <div style="display:flex;gap:0;overflow-x:auto">
         {% for s in stages %}
-        {% set active = lead.stage_index >= loop.index0 %}
-        <div style="flex:1;min-width:80px;text-align:center">
-          <div style="height:4px;border-radius:2px;background:{% if active %}#0a7c4a{% else %}#e8e8e8{% endif %};margin-bottom:6px"></div>
-          <div style="font-size:10px;color:{% if lead.stage==s %}#0a7c4a{% else %}#aaa{% endif %};font-weight:{% if lead.stage==s %}600{% else %}400{% endif %}">{{ s }}</div>
+        {% set is_done = lead.stage_index >= loop.index0 %}
+        {% set is_current = lead.stage == s %}
+        <div style="flex:1;min-width:68px;text-align:center">
+          <div style="height:5px;background:{% if is_done %}var(--green){% else %}var(--border){% endif %};margin-bottom:7px;
+            border-radius:{% if loop.first %}3px 0 0 3px{% elif loop.last %}0 3px 3px 0{% else %}0{% endif %}"></div>
+          <div style="font-size:10px;font-weight:{% if is_current %}700{% else %}400{% endif %};
+            color:{% if is_current %}var(--green){% elif is_done %}var(--text-2){% else %}var(--text-3){% endif %};
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px">
+            {{ s }}
+          </div>
         </div>
         {% endfor %}
       </div>
     </div>
 
-    <!-- Update stage form -->
-    <div class="card" style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px">Update Stage</div>
-      <form method="POST" action="{{ url_for('leads.update_stage', lead_id=lead.id) }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-        <div style="flex:1;min-width:160px">
-          <select class="form-control" name="stage">
-            {% for s in stages %}
-            <option {% if lead.stage==s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-          </select>
+    <!-- Update Stage -->
+    <div class="card" style="padding:18px 20px">
+      <div class="page-section-title" style="margin-bottom:14px">Update Stage</div>
+      <form method="POST" action="{{ url_for('leads.update_stage', lead_id=lead.id) }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
+          <div>
+            <label class="form-label">Stage</label>
+            <select class="form-control" name="stage">
+              {% for s in stages %}
+              <option {% if lead.stage==s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Paket</label>
+            <select class="form-control" name="paket">
+              <option value="">— pilih paket —</option>
+              {% for p in paket_list %}
+              <option {% if lead.paket==p %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Update</button>
         </div>
-        <div style="flex:1;min-width:140px">
-          <select class="form-control" name="paket">
-            <option value="">Paket (opsional)</option>
-            {% for p in paket_list %}
-            <option {% if lead.paket==p %}selected{% endif %}>{{ p }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Update</button>
       </form>
     </div>
 
-    <!-- Data lead -->
-    <div class="card">
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:14px">Informasi Lead</div>
-      <table style="width:100%;font-size:13px;border-collapse:collapse">
-        {% macro row(label, val) %}
-        <tr><td style="color:#888;padding:7px 0;width:140px">{{ label }}</td><td style="color:#1a1a1a;font-weight:500">{{ val or '—' }}</td></tr>
+    <!-- Info Lead -->
+    <div class="card" style="padding:18px 20px">
+      <div class="page-section-title" style="margin-bottom:14px">Informasi Lead</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+        {% macro info_row(label, val, full=false) %}
+        <div style="padding:9px 0;border-bottom:1px solid #f4f4f5;{% if full %}grid-column:1/-1{% endif %}">
+          <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">{{ label }}</div>
+          <div style="font-size:13px;color:var(--text);font-weight:500">{{ val or '—' }}</div>
+        </div>
         {% endmacro %}
-        {{ row('ID', lead.id) }}
-        {{ row('No WA', lead.no_wa) }}
-        {{ row('Jenis Naskah', lead.jenis_naskah) }}
-        {{ row('Tujuan', lead.tujuan) }}
-        {{ row('Deadline Klien', lead.deadline_klien) }}
-        {{ row('Asal Iklan', lead.asal_iklan) }}
-        {{ row('Paket', lead.paket) }}
-        {{ row('Harga', 'Rp ' + "{:,.0f}".format(lead.harga).replace(",",".") if lead.harga else '—') }}
-        {{ row('PIC', lead.pic.name if lead.pic else '—') }}
-        {{ row('Masuk', lead.created_at.strftime('%d %b %Y %H:%M')) }}
-      </table>
+        {{ info_row('No WA', lead.no_wa) }}
+        {{ info_row('Jenis Naskah', lead.jenis_naskah) }}
+        {{ info_row('Tujuan', lead.tujuan) }}
+        {{ info_row('Deadline Klien', lead.deadline_klien) }}
+        {{ info_row('Asal Iklan', lead.asal_iklan) }}
+        {{ info_row('PIC', lead.pic.name if lead.pic else '—') }}
+        {% if lead.harga %}
+        {{ info_row('Harga', 'Rp ' + "{:,.0f}".format(lead.harga).replace(",",".")) }}
+        {% endif %}
+        {{ info_row('Masuk', lead.created_at.strftime('%d %b %Y %H:%M')) }}
+      </div>
       {% if lead.catatan %}
-      <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:7px;font-size:13px;color:#555">
-        <div style="font-size:11px;color:#aaa;margin-bottom:4px">Catatan</div>
-        {{ lead.catatan }}
+      <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:8px;border-left:3px solid var(--green)">
+        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Catatan</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.6">{{ lead.catatan }}</div>
       </div>
       {% endif %}
     </div>
+
   </div>
 
-  <!-- Kanan: FU schedule -->
+  <!-- Kanan: FU Schedule -->
   <div>
-    <div class="card">
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px">Jadwal Follow-up</div>
+    <div class="card" style="padding:18px">
+      <div class="page-section-title" style="margin-bottom:14px">
+        Jadwal Follow-up
+        <span style="font-size:11px;color:var(--text-3);font-weight:400;margin-left:6px">
+          {{ lead.fu_records|selectattr('status','eq','Terkirim')|list|length }}/{{ lead.fu_records|length }} terkirim
+        </span>
+      </div>
       {% for fu in lead.fu_records|sort(attribute='fu_ke') %}
-      <div style="border:1px solid {% if fu.status=='Terkirim' %}#a7f3d0{% elif fu.terlambat %}#fca5a5{% else %}#e8e8e8{% endif %};border-radius:8px;padding:10px 12px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-size:12px;font-weight:600;color:#1a1a1a">FU-{{ fu.fu_ke }} {{ fu.label_hari }}</div>
-          <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:{% if fu.status=='Terkirim' %}#d1fae5;color:#065f46{% elif fu.terlambat %}#fee2e2;color:#991b1b{% else %}#f0f0f0;color:#888{% endif %}">
-            {{ fu.status }}{% if fu.terlambat %} ⚠{% endif %}
+      {% set is_sent = fu.status == 'Terkirim' %}
+      {% set is_late = fu.terlambat %}
+      <div style="border:1px solid {% if is_sent %}var(--green-mid){% elif is_late %}#fca5a5{% else %}var(--border){% endif %};
+                  border-radius:9px;padding:11px 13px;margin-bottom:8px;
+                  background:{% if is_sent %}var(--green-light){% else %}var(--white){% endif %}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">FU-{{ fu.fu_ke }} · {{ fu.label_hari }}</div>
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;
+            background:{% if is_sent %}var(--green-mid);color:var(--green-dark){% elif is_late %}#fee2e2;color:var(--red){% else %}#f4f4f5;color:var(--text-3){% endif %}">
+            {% if is_late and not is_sent %}⚠ {% endif %}{{ fu.status }}
           </span>
         </div>
-        <div style="font-size:11px;color:#888;margin-bottom:8px">{{ fu.jadwal_kirim.strftime('%d %b %Y') }}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:8px">
+          {{ fu.jadwal_kirim.strftime('%d %b %Y') }}
+          {% if fu.waktu_kirim %}· dikirim {{ fu.waktu_kirim.strftime('%H:%M') }}{% endif %}
+        </div>
         {% if fu.status == 'Pending' %}
-        <form method="POST" action="{{ url_for('followup.kirim', fu_id=fu.id) }}" style="display:inline">
-          <button type="submit" class="btn btn-primary btn-sm">Kirim WA</button>
-        </form>
-        <form method="POST" action="{{ url_for('followup.batalkan', fu_id=fu.id) }}" style="display:inline;margin-left:4px">
-          <button type="submit" class="btn btn-danger btn-sm">Batalkan</button>
-        </form>
-        {% elif fu.waktu_kirim %}
-        <div style="font-size:11px;color:#0a7c4a">✓ {{ fu.waktu_kirim.strftime('%d %b %Y %H:%M') }}</div>
+        <div style="display:flex;gap:6px">
+          <form method="POST" action="{{ url_for('followup.kirim', fu_id=fu.id) }}" style="display:inline">
+            <button type="submit" class="btn btn-primary btn-xs">Kirim WA</button>
+          </form>
+          <form method="POST" action="{{ url_for('followup.batalkan', fu_id=fu.id) }}" style="display:inline">
+            <button type="submit" class="btn btn-danger btn-xs">Batalkan</button>
+          </form>
+        </div>
         {% endif %}
       </div>
       {% endfor %}
-    </div>
-
-    <!-- Quick WA link -->
-    <div class="card-sm" style="margin-top:12px;background:#f0f9f4">
-      <div style="font-size:12px;font-weight:600;margin-bottom:6px">Buka di WhatsApp</div>
-      <a href="https://wa.me/{{ lead.no_wa }}" target="_blank" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">
-        💬 Chat {{ lead.nama }}
-      </a>
     </div>
   </div>
 
