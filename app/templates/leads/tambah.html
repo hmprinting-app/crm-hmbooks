@@ -1,82 +1,100 @@
 {% extends "base.html" %}
 {% block title %}Tambah Lead{% endblock %}
 {% block topbar_title %}Tambah Lead Baru{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('leads.index') }}" class="btn btn-secondary btn-sm">← Kembali</a>
+{% endblock %}
 
 {% block content %}
-<div style="max-width:640px">
-<div class="card">
-  <form method="POST">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="form-group">
-        <label class="form-label">Nama lengkap *</label>
-        <input class="form-control" name="nama" required placeholder="Dr. Budi Santoso">
+<div style="max-width:660px">
+
+  <div class="card" style="padding:24px">
+    <form method="POST">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label class="form-label">Nama lengkap <span style="color:var(--red)">*</span></label>
+          <input class="form-control" name="nama" required placeholder="Dr. Budi Santoso">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nomor WhatsApp <span style="color:var(--red)">*</span></label>
+          <input class="form-control" name="no_wa" required placeholder="628123456789">
+          <div class="form-hint">Format: 62xxx (tanpa tanda +)</div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Nomor WhatsApp *</label>
-        <input class="form-control" name="no_wa" required placeholder="628123456789">
-        <div style="font-size:11px;color:#aaa;margin-top:4px">Format: 62xxx (tanpa +)</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label class="form-label">Jenis Naskah</label>
+          <select class="form-control" name="jenis_naskah">
+            <option value="">— pilih —</option>
+            <option>Disertasi</option>
+            <option>Tesis</option>
+            <option>Monograf</option>
+            <option>KTI</option>
+            <option>Lainnya</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tujuan</label>
+          <select class="form-control" name="tujuan">
+            <option value="">— pilih —</option>
+            <option>BKD</option>
+            <option>Jabfung</option>
+            <option>Keduanya</option>
+            <option>Pribadi</option>
+          </select>
+        </div>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label class="form-label">Paket</label>
+          <select class="form-control" name="paket">
+            <option value="">— belum dipilih —</option>
+            {% for p in paket_list %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deadline Klien</label>
+          <input class="form-control" name="deadline_klien" placeholder="cth: Juni 2025">
+        </div>
+      </div>
+
       <div class="form-group">
-        <label class="form-label">Jenis naskah</label>
-        <select class="form-control" name="jenis_naskah">
-          <option value="">— pilih —</option>
-          <option>Disertasi</option>
-          <option>Tesis</option>
-          <option>Monograf</option>
-          <option>KTI</option>
+        <label class="form-label">Asal Iklan</label>
+        <select class="form-control" name="asal_iklan">
+          <option>Meta Ads</option>
+          <option>CTWA - Meta Ads</option>
+          <option>Referral</option>
+          <option>Organik</option>
           <option>Lainnya</option>
         </select>
       </div>
+
       <div class="form-group">
-        <label class="form-label">Tujuan</label>
-        <select class="form-control" name="tujuan">
-          <option value="">— pilih —</option>
-          <option>BKD</option>
-          <option>Jabfung</option>
-          <option>Keduanya</option>
-          <option>Pribadi</option>
-        </select>
+        <label class="form-label">Catatan</label>
+        <textarea class="form-control" name="catatan" placeholder="Informasi tambahan tentang lead ini..."></textarea>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="form-group">
-        <label class="form-label">Paket</label>
-        <select class="form-control" name="paket" id="paket-sel">
-          <option value="">— pilih —</option>
-          {% for p in paket_list %}
-          <option value="{{ p }}">{{ p }}</option>
-          {% endfor %}
-        </select>
+
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button type="submit" class="btn btn-primary">Simpan & Generate FU</button>
+        <a href="{{ url_for('leads.index') }}" class="btn btn-secondary">Batal</a>
       </div>
-      <div class="form-group">
-        <label class="form-label">Deadline klien</label>
-        <input class="form-control" name="deadline_klien" placeholder="Juni 2025">
-      </div>
+
+    </form>
+  </div>
+
+  <!-- Info tip -->
+  <div style="margin-top:14px;display:flex;align-items:flex-start;gap:10px;padding:13px 16px;background:var(--green-light);border-radius:9px;border:1px solid var(--green-mid)">
+    <div style="font-size:16px;flex-shrink:0;margin-top:1px">💡</div>
+    <div style="font-size:12px;color:var(--green-dark);line-height:1.6">
+      Setelah disimpan, sistem otomatis membuat <strong>6 jadwal follow-up</strong>
+      (H+0, H+1, H+2, H+3, H+5, H+7). Kamu bisa kirim langsung dari halaman Follow-up WA.
     </div>
-    <div class="form-group">
-      <label class="form-label">Asal iklan</label>
-      <select class="form-control" name="asal_iklan">
-        <option>Meta Ads</option>
-        <option>CTWA - Meta Ads</option>
-        <option>Referral</option>
-        <option>Organik</option>
-        <option>Lainnya</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Catatan</label>
-      <textarea class="form-control" name="catatan" placeholder="Informasi tambahan..."></textarea>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="btn btn-primary">Simpan & Generate FU</button>
-      <a href="{{ url_for('leads.index') }}" class="btn btn-secondary">Batal</a>
-    </div>
-  </form>
-</div>
-<div style="margin-top:14px;padding:12px 16px;background:#f0f9f4;border-radius:8px;font-size:12px;color:#555">
-  💡 Setelah disimpan, sistem otomatis membuat 6 jadwal follow-up (H+0, H+1, H+2, H+3, H+5, H+7).
-</div>
+  </div>
+
 </div>
 {% endblock %}
