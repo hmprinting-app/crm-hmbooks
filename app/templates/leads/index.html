@@ -6,62 +6,85 @@
 {% endblock %}
 
 {% block content %}
-<!-- Filter bar -->
-<div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-  <form method="GET" style="display:flex;gap:8px;flex:1;max-width:500px">
-    <input class="form-control" name="q" value="{{ q }}" placeholder="Cari nama atau nomor WA..." style="flex:1">
+
+<!-- Filter & Search bar -->
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+  <form method="GET" style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+    <input class="form-control" name="q" value="{{ request.args.get('q','') }}"
+           placeholder="Cari nama atau nomor WA..." style="max-width:280px">
+    <select class="form-control" name="stage" style="max-width:180px" onchange="this.form.submit()">
+      <option value="">Semua Stage</option>
+      {% for s in stages %}
+      <option {% if request.args.get('stage')==s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
     <button type="submit" class="btn btn-secondary">Cari</button>
+    {% if request.args.get('q') or request.args.get('stage') %}
+    <a href="{{ url_for('leads.index') }}" class="btn btn-secondary">Reset</a>
+    {% endif %}
   </form>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">
-    <a href="{{ url_for('leads.index') }}" class="btn btn-sm {% if not stage_filter %}btn-primary{% else %}btn-secondary{% endif %}">Semua</a>
-    {% for s in stages %}
-    <a href="{{ url_for('leads.index', stage=s) }}" class="btn btn-sm {% if stage_filter==s %}btn-primary{% else %}btn-secondary{% endif %}">{{ s }}</a>
-    {% endfor %}
+  <div style="font-size:12px;color:var(--text-3);white-space:nowrap">
+    {{ leads|length }} lead{% if leads|length != 1 %}s{% endif %}
   </div>
 </div>
 
+<!-- Leads Table -->
 <div class="table-wrap">
   <table>
-    <thead><tr>
-      <th>ID</th><th>Nama</th><th>No WA</th><th>Naskah</th><th>Tujuan</th><th>Stage</th><th>Paket</th><th>FU Berikutnya</th><th></th>
-    </tr></thead>
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th>Nama</th>
+        <th>No WA</th>
+        <th>Naskah</th>
+        <th>Tujuan</th>
+        <th>Stage</th>
+        <th>Paket</th>
+        <th>FU Berikutnya</th>
+        <th style="width:80px">Aksi</th>
+      </tr>
+    </thead>
     <tbody>
-    {% for lead in leads %}
-    {% set stage_cls = lead.stage.lower().replace(' ','-') %}
-    <tr>
-      <td style="font-size:11px;color:#888;font-family:monospace">{{ lead.id }}</td>
-      <td style="font-weight:500">
-        <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" style="color:#1a1a1a">{{ lead.nama }}</a>
-      </td>
-      <td style="font-family:monospace;font-size:12px">{{ lead.no_wa }}</td>
-      <td>{{ lead.jenis_naskah or '—' }}</td>
-      <td>{{ lead.tujuan or '—' }}</td>
-      <td><span class="badge badge-{{ stage_cls }}">{{ lead.stage }}</span></td>
-      <td>
-        {% if lead.paket %}
-          <span style="font-size:12px;color:#0a7c4a;font-weight:500">{{ lead.paket }}</span>
-          <div style="font-size:11px;color:#888">Rp {{ "{:,.0f}".format(lead.harga).replace(",",".") }}</div>
-        {% else %}—{% endif %}
-      </td>
-      <td>
-        {% if lead.fu_berikutnya %}
-          <span class="{% if lead.fu_berikutnya.terlambat %}fu-hot{% else %}fu-warm{% endif %}">
-            {{ lead.fu_berikutnya.label_hari }}<br>
-            <span style="font-size:11px">{{ lead.fu_berikutnya.jadwal_kirim.strftime('%d %b %Y') }}</span>
-          </span>
-        {% else %}<span style="color:#aaa">—</span>{% endif %}
-      </td>
-      <td>
-        <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">Detail</a>
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="9" style="text-align:center;color:#888;padding:32px">
-      Tidak ada leads{% if stage_filter %} dengan stage "{{ stage_filter }}"{% endif %}.
-      <a href="{{ url_for('leads.tambah') }}" style="color:#0a7c4a">Tambah lead baru →</a>
-    </td></tr>
-    {% endfor %}
+      {% for lead in leads %}
+      {% set stage_cls = lead.stage.lower().replace(' ','-') %}
+      <tr onclick="location.href='{{ url_for('leads.detail', lead_id=lead.id) }}'">
+        <td style="font-size:11px;color:var(--text-3);font-family:monospace">{{ lead.id }}</td>
+        <td>
+          <div style="font-weight:600;color:var(--text)">{{ lead.nama }}</div>
+          {% if lead.asal_iklan %}
+          <div style="font-size:11px;color:var(--text-3);margin-top:1px">{{ lead.asal_iklan }}</div>
+          {% endif %}
+        </td>
+        <td style="font-family:monospace;font-size:12px;color:var(--text-2)">{{ lead.no_wa }}</td>
+        <td style="color:var(--text-2)">{{ lead.jenis_naskah or '—' }}</td>
+        <td style="color:var(--text-2)">{{ lead.tujuan or '—' }}</td>
+        <td><span class="badge badge-{{ stage_cls }}">{{ lead.stage }}</span></td>
+        <td style="color:var(--text-2);font-size:12px">{{ lead.paket or '—' }}</td>
+        <td>
+          {% if lead.fu_berikutnya %}
+            <span class="{% if lead.fu_berikutnya.terlambat %}fu-hot{% else %}fu-warm{% endif %}">
+              {{ lead.fu_berikutnya.label_hari }}
+              <span style="font-weight:400;opacity:.8">({{ lead.fu_berikutnya.jadwal_kirim.strftime('%d %b') }})</span>
+            </span>
+          {% else %}
+            <span style="color:var(--text-3)">—</span>
+          {% endif %}
+        </td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">
+          <a href="{{ url_for('leads.edit', lead_id=lead.id) }}" class="btn btn-secondary btn-xs">Edit</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" style="text-align:center;padding:40px;color:var(--text-3)">
+          <div style="font-size:20px;margin-bottom:8px">👥</div>
+          <div style="font-weight:500;color:var(--text-2);margin-bottom:4px">Belum ada leads</div>
+          <a href="{{ url_for('leads.tambah') }}" style="color:var(--green);font-weight:600;font-size:13px">+ Tambah lead pertama →</a>
+        </td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>
+
 {% endblock %}
