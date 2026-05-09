@@ -5,147 +5,247 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}CRM{% endblock %} — HM Books Pustaka</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#1a1a1a;font-size:14px}
+:root{
+  --green:#0d6e3f;
+  --green-dark:#095430;
+  --green-light:#e8f5ee;
+  --green-mid:#c3e8d4;
+  --accent:#f5a623;
+  --accent-light:#fef3dc;
+  --text:#18181b;
+  --text-2:#52525b;
+  --text-3:#a1a1aa;
+  --border:#e4e4e7;
+  --border-2:#d1d5db;
+  --bg:#f7f7f8;
+  --white:#ffffff;
+  --sidebar-w:228px;
+  --red:#dc2626;
+  --red-light:#fef2f2;
+  --amber:#d97706;
+  --amber-light:#fffbeb;
+  --blue:#1d4ed8;
+  --blue-light:#eff6ff;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
 a{text-decoration:none;color:inherit}
 
-/* Sidebar */
-.sidebar{position:fixed;top:0;left:0;width:220px;height:100vh;background:#fff;border-right:1px solid #e8e8e8;display:flex;flex-direction:column;z-index:100}
-.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid #e8e8e8}
-.sidebar-logo .brand{font-size:15px;font-weight:600;color:#1a1a1a}
-.sidebar-logo .sub{font-size:11px;color:#888;margin-top:2px}
-.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
-.nav-section{padding:8px 16px 4px;font-size:10px;font-weight:600;color:#aaa;letter-spacing:.06em;text-transform:uppercase}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;color:#555;font-size:13px;border-radius:0;transition:background .15s,color .15s;cursor:pointer}
-.nav-item:hover{background:#f5f5f5;color:#1a1a1a}
-.nav-item.active{background:#f0f9f4;color:#0a7c4a;font-weight:500}
-.nav-item .icon{font-size:16px;width:18px;text-align:center}
-.sidebar-footer{padding:16px;border-top:1px solid #e8e8e8;font-size:12px;color:#888}
+/* ── Sidebar ── */
+.sidebar{
+  position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;
+  background:var(--white);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:100;
+}
+.sidebar-brand{padding:20px 18px 18px;border-bottom:1px solid var(--border)}
+.sidebar-logo-mark{
+  width:36px;height:36px;background:var(--green);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+}
+.sidebar-logo-mark span{color:#fff;font-family:'DM Serif Display',serif;font-size:16px;letter-spacing:-0.5px}
+.sidebar-brand-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.2}
+.sidebar-brand-sub{font-size:11px;color:var(--text-3);margin-top:2px;letter-spacing:.02em}
 
-/* Main */
-.main{margin-left:220px;min-height:100vh}
-.topbar{background:#fff;border-bottom:1px solid #e8e8e8;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.topbar-title{font-size:15px;font-weight:600}
+.sidebar-nav{flex:1;padding:10px 10px;overflow-y:auto}
+.nav-label{
+  font-size:10px;font-weight:600;color:var(--text-3);
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:8px 8px 4px;margin-top:4px
+}
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 10px;color:var(--text-2);font-size:13px;font-weight:500;
+  border-radius:8px;transition:background .12s,color .12s;cursor:pointer;
+  margin-bottom:2px;
+}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--green-light);color:var(--green);font-weight:600}
+.nav-item.active .nav-icon{color:var(--green)}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+
+.sidebar-footer{
+  padding:14px 16px;border-top:1px solid var(--border);
+}
+.user-info{display:flex;align-items:center;gap:10px}
+.user-avatar{
+  width:30px;height:30px;border-radius:50%;background:var(--green-light);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--green);flex-shrink:0;
+}
+.user-name{font-size:12px;font-weight:600;color:var(--text);line-height:1.2}
+.user-logout{font-size:11px;color:var(--text-3);transition:color .12s}
+.user-logout:hover{color:var(--red)}
+
+/* ── Main ── */
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+.topbar{
+  background:var(--white);border-bottom:1px solid var(--border);
+  padding:0 28px;height:54px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-size:15px;font-weight:600;color:var(--text)}
 .topbar-actions{display:flex;gap:8px;align-items:center}
 .content{padding:24px 28px}
 
-/* Cards */
-.card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:20px}
-.card-sm{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px 16px}
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;
+  cursor:pointer;border:1px solid transparent;transition:all .15s;
+  font-family:inherit;line-height:1;
+}
+.btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-primary:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.btn-secondary{background:var(--white);color:var(--text-2);border-color:var(--border-2)}
+.btn-secondary:hover{background:var(--bg);color:var(--text)}
+.btn-danger{background:var(--white);color:var(--red);border-color:#fca5a5}
+.btn-danger:hover{background:var(--red-light)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:6px}
+.btn-xs{padding:4px 9px;font-size:11px;border-radius:5px}
 
-/* Metric cards */
-.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-.metric-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:18px 20px}
-.metric-label{font-size:12px;color:#888;margin-bottom:8px}
-.metric-val{font-size:24px;font-weight:600;color:#1a1a1a}
-.metric-sub{font-size:12px;color:#aaa;margin-top:4px}
-.metric-up{color:#0a7c4a}
-.metric-warn{color:#d97706}
+/* ── Cards ── */
+.card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:12px;padding:20px;
+}
+.card-sm{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;
+}
 
-/* Buttons */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s}
-.btn-primary{background:#0a7c4a;color:#fff;border-color:#0a7c4a}
-.btn-primary:hover{background:#086b3f}
-.btn-secondary{background:#fff;color:#555;border-color:#ddd}
-.btn-secondary:hover{background:#f5f5f5}
-.btn-danger{background:#fff;color:#dc2626;border-color:#fca5a5}
-.btn-danger:hover{background:#fef2f2}
-.btn-sm{padding:5px 10px;font-size:12px}
+/* ── Metric cards ── */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.metric-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;
+}
+.metric-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--green);border-radius:3px 3px 0 0;opacity:.4;
+}
+.metric-card.warn::before{background:var(--accent)}
+.metric-card.hot::before{background:var(--red)}
+.metric-label{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+.metric-val{font-size:26px;font-weight:600;color:var(--text);letter-spacing:-0.5px;line-height:1}
+.metric-val.warn{color:var(--amber)}
+.metric-val.hot{color:var(--red)}
+.metric-sub{font-size:11px;color:var(--text-3);margin-top:6px}
 
-/* Badges / Stage */
-.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
-.badge-new{background:#dbeafe;color:#1e40af}
-.badge-qualify{background:#dcfce7;color:#166534}
-.badge-paket{background:#fef9c3;color:#854d0e}
-.badge-invoice{background:#fed7aa;color:#9a3412}
-.badge-dp{background:#fce7f3;color:#9d174d}
+/* ── Badges ── */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.01em}
+.badge-new-lead,.badge-new{background:#dbeafe;color:#1e40af}
+.badge-qualify{background:#dcfce7;color:#15803d}
+.badge-paket-dipilih,.badge-paket{background:#fef9c3;color:#92400e}
+.badge-invoice-terkirim,.badge-invoice{background:#fed7aa;color:#9a3412}
+.badge-dp-masuk,.badge-dp{background:#fce7f3;color:#9d174d}
 .badge-produksi{background:#d1fae5;color:#065f46}
-.badge-selesai{background:#ede9fe;color:#4c1d95}
+.badge-selesai{background:var(--green-light);color:var(--green);border:1px solid var(--green-mid)}
 .badge-lost{background:#f1f5f9;color:#64748b}
 
-/* Table */
-.table-wrap{background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden}
+/* ── Table ── */
+.table-wrap{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table-header{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.table-title{font-size:13px;font-weight:600;color:var(--text)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-thead tr{background:#f9fafb}
-th{padding:10px 14px;text-align:left;font-weight:500;color:#555;font-size:12px;border-bottom:1px solid #e8e8e8}
-td{padding:10px 14px;border-bottom:1px solid #f0f0f0;color:#333}
+thead tr{background:var(--bg)}
+th{padding:10px 14px;text-align:left;font-weight:600;color:var(--text-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+td{padding:11px 14px;border-bottom:1px solid #f4f4f5;color:var(--text-2)}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafafa}
+tbody tr:hover td{background:#fafafa}
+tbody tr{cursor:pointer;transition:background .1s}
 
-/* Forms */
-.form-group{margin-bottom:16px}
-.form-label{display:block;font-size:12px;font-weight:500;color:#555;margin-bottom:6px}
-.form-control{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:7px;font-size:13px;outline:none;transition:border-color .15s}
-.form-control:focus{border-color:#0a7c4a;box-shadow:0 0 0 2px rgba(10,124,74,.1)}
-select.form-control{background:#fff}
-textarea.form-control{resize:vertical;min-height:80px}
+/* ── Forms ── */
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px}
+.form-control{
+  width:100%;padding:9px 12px;border:1px solid var(--border-2);
+  border-radius:8px;font-size:13px;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+  font-family:inherit;background:var(--white);color:var(--text);
+}
+.form-control:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(13,110,63,.1)}
+select.form-control{background:var(--white)}
+textarea.form-control{resize:vertical;min-height:90px}
+.form-hint{font-size:11px;color:var(--text-3);margin-top:4px}
 
-/* Alert flash */
-.flash{padding:10px 16px;border-radius:7px;font-size:13px;margin-bottom:16px}
-.flash-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
-.flash-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+/* ── Flash alerts ── */
+.flash{padding:11px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;font-weight:500}
+.flash-success{background:var(--green-light);color:var(--green-dark);border:1px solid var(--green-mid)}
+.flash-error{background:var(--red-light);color:var(--red);border:1px solid #fca5a5}
 
-/* Pipeline kanban */
-.kanban-board{display:grid;grid-template-columns:repeat(7,minmax(160px,1fr));gap:12px;overflow-x:auto;padding-bottom:8px}
-.kanban-col{background:#f9fafb;border:1px solid #e8e8e8;border-radius:10px;padding:12px}
-.kanban-col-header{font-size:12px;font-weight:600;color:#555;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
-.kanban-count{background:#e8e8e8;color:#555;font-size:11px;padding:2px 7px;border-radius:20px}
-.kanban-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s}
-.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.kanban-card .nama{font-weight:500;font-size:13px;color:#1a1a1a;margin-bottom:4px}
-.kanban-card .sub{font-size:11px;color:#888}
-.kanban-card .paket{font-size:11px;color:#0a7c4a;font-weight:500;margin-top:4px}
+/* ── Pipeline kanban ── */
+.kanban-board{display:grid;grid-template-columns:repeat(7,minmax(155px,1fr));gap:10px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px}
+.kanban-col-header{font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;text-transform:uppercase;letter-spacing:.04em}
+.kanban-count{background:var(--white);color:var(--text-2);font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;border:1px solid var(--border)}
+.kanban-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.07);border-color:var(--border-2)}
+.kanban-card .nama{font-weight:600;font-size:13px;color:var(--text);margin-bottom:3px}
+.kanban-card .sub{font-size:11px;color:var(--text-3)}
+.kanban-card .paket{font-size:11px;color:var(--green);font-weight:600;margin-top:5px}
 
-/* FU status */
-.fu-hot{color:#dc2626;font-weight:500}
-.fu-warm{color:#d97706;font-weight:500}
-.fu-cold{color:#6b7280}
+/* ── FU status ── */
+.fu-hot{color:var(--red);font-weight:600;font-size:12px}
+.fu-warm{color:var(--amber);font-weight:600;font-size:12px}
+.fu-cold{color:var(--text-3);font-size:12px}
 
-/* Responsive */
+/* ── Page header ── */
+.page-section-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:.01em}
+
+/* ── Divider ── */
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* ── Responsive ── */
 @media(max-width:768px){
   .sidebar{display:none}
   .main{margin-left:0}
   .metrics-grid{grid-template-columns:repeat(2,1fr)}
-  .kanban-board{grid-template-columns:repeat(3,160px)}
+  .kanban-board{grid-template-columns:repeat(3,155px)}
 }
 </style>
 {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<!-- Sidebar -->
 <aside class="sidebar">
-  <div class="sidebar-logo">
-    <div style="width:32px;height:32px;background:#0a7c4a;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px">
-      <span style="color:#fff;font-weight:700;font-size:14px">HB</span>
-    </div>
-    <div class="brand">HM Books Pustaka</div>
-    <div class="sub">CRM System</div>
+  <div class="sidebar-brand">
+    <div class="sidebar-logo-mark"><span>HB</span></div>
+    <div class="sidebar-brand-name">HM Books Pustaka</div>
+    <div class="sidebar-brand-sub">CRM System</div>
   </div>
+
   <nav class="sidebar-nav">
-    <div class="nav-section">Menu Utama</div>
+    <div class="nav-label">Menu Utama</div>
     <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.endpoint=='dashboard.index' %}active{% endif %}">
-      <span class="icon">📊</span> Dashboard
+      <span class="nav-icon">📊</span> Dashboard
     </a>
     <a href="{{ url_for('leads.index') }}" class="nav-item {% if 'leads' in request.endpoint %}active{% endif %}">
-      <span class="icon">👥</span> Leads
+      <span class="nav-icon">👥</span> Leads
     </a>
     <a href="{{ url_for('pipeline.index') }}" class="nav-item {% if 'pipeline' in request.endpoint %}active{% endif %}">
-      <span class="icon">📋</span> Pipeline
+      <span class="nav-icon">📋</span> Pipeline
     </a>
     <a href="{{ url_for('followup.index') }}" class="nav-item {% if 'followup' in request.endpoint %}active{% endif %}">
-      <span class="icon">📱</span> Follow-up WA
+      <span class="nav-icon">📱</span> Follow-up WA
     </a>
   </nav>
+
   <div class="sidebar-footer">
-    <div style="font-weight:500;color:#333;margin-bottom:4px">{{ current_user.name }}</div>
-    <a href="{{ url_for('auth.logout') }}" style="color:#888;font-size:12px">Logout</a>
+    <div class="user-info">
+      <div class="user-avatar">{{ current_user.name[0]|upper }}</div>
+      <div style="flex:1;min-width:0">
+        <div class="user-name">{{ current_user.name }}</div>
+        <a href="{{ url_for('auth.logout') }}" class="user-logout">Logout</a>
+      </div>
+    </div>
   </div>
 </aside>
 
-<!-- Main -->
 <div class="main">
   <div class="topbar">
     <div class="topbar-title">{% block topbar_title %}{% endblock %}</div>
@@ -160,5 +260,6 @@ textarea.form-control{resize:vertical;min-height:80px}
     {% block content %}{% endblock %}
   </div>
 </div>
+
 </body>
 </html>
