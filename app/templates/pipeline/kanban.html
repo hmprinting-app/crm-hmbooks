@@ -5,37 +5,143 @@
 <a href="{{ url_for('leads.tambah') }}" class="btn btn-primary">+ Tambah Lead</a>
 {% endblock %}
 
+{% block extra_head %}
+<style>
+.kanban-board{
+  display:grid;
+  grid-template-columns:repeat(8,minmax(170px,1fr));
+  gap:10px;
+  overflow-x:auto;
+  padding-bottom:12px;
+  align-items:start;
+}
+.kanban-col{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:11px;
+  padding:11px 10px;
+  min-height:100px;
+}
+.kanban-col-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;padding:0 2px;
+}
+.kanban-col-label{
+  font-size:11px;font-weight:700;color:var(--text-2);
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.kanban-count{
+  font-size:11px;font-weight:700;
+  padding:2px 8px;border-radius:20px;
+  background:var(--white);border:1px solid var(--border);
+  color:var(--text-2);
+}
+.kanban-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:9px;padding:11px 12px;margin-bottom:7px;
+  display:block;transition:box-shadow .15s,border-color .15s;
+}
+.kanban-card:hover{
+  box-shadow:0 3px 10px rgba(0,0,0,.08);
+  border-color:var(--border-2);
+}
+.kanban-card .k-nama{
+  font-size:13px;font-weight:600;color:var(--text);
+  margin-bottom:3px;line-height:1.3;
+}
+.kanban-card .k-sub{
+  font-size:11px;color:var(--text-3);line-height:1.4;
+}
+.kanban-card .k-paket{
+  display:inline-block;margin-top:7px;
+  font-size:11px;font-weight:600;color:var(--green);
+  background:var(--green-light);padding:2px 8px;border-radius:20px;
+}
+.kanban-card .k-fu{
+  margin-top:6px;font-size:11px;font-weight:600;
+  display:flex;align-items:center;gap:4px;
+}
+.k-fu.late{color:var(--red)}
+.k-fu.soon{color:var(--amber)}
+.kanban-empty{
+  text-align:center;padding:20px 8px;
+  font-size:12px;color:var(--text-3);
+}
+
+/* Stage color accents on col top border */
+.col-new     .kanban-col-label{color:#1e40af}
+.col-qualify .kanban-col-label{color:#15803d}
+.col-paket   .kanban-col-label{color:#92400e}
+.col-invoice .kanban-col-label{color:#9a3412}
+.col-dp      .kanban-col-label{color:#9d174d}
+.col-produksi .kanban-col-label{color:#065f46}
+.col-selesai .kanban-col-label{color:var(--green)}
+.col-lost    .kanban-col-label{color:var(--text-3)}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="kanban-board">
-{% set stage_icons = {
-  'New Lead':'🔵','Qualify':'🟢','Paket Dipilih':'🟡','Invoice Terkirim':'🟠',
-  'DP Masuk':'🔴','Produksi':'✅','Selesai':'🏆','Lost':'❌'
-} %}
-{% for s in stages %}
-{% set leads_in_stage = kanban.get(s, []) %}
-<div class="kanban-col">
-  <div class="kanban-col-header">
-    <span>{{ stage_icons.get(s,'') }} {{ s }}</span>
-    <span class="kanban-count">{{ leads_in_stage|length }}</span>
+
+<!-- Summary strip -->
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  {% set total_active = 0 %}
+  {% for s in stages %}{% if s != 'Lost' %}{% set total_active = total_active + kanban.get(s,[])|length %}{% endif %}{% endfor %}
+  <div style="font-size:13px;color:var(--text-2);padding:6px 14px;background:var(--white);border:1px solid var(--border);border-radius:8px;font-weight:500">
+    Total aktif: <strong style="color:var(--text)">{{ total_active }} lead</strong>
   </div>
-  {% for lead in leads_in_stage %}
-  <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" style="display:block">
-    <div class="kanban-card">
-      <div class="nama">{{ lead.nama }}</div>
-      <div class="sub">{{ lead.no_wa }}</div>
-      {% if lead.jenis_naskah %}<div class="sub">{{ lead.jenis_naskah }}</div>{% endif %}
-      {% if lead.paket %}<div class="paket">{{ lead.paket }} · Rp {{ "{:,.0f}".format(lead.harga).replace(",",".") }}</div>{% endif %}
-      {% if lead.fu_berikutnya %}
-      <div style="margin-top:6px;font-size:10px;color:{% if lead.fu_berikutnya.terlambat %}#dc2626{% else %}#d97706{% endif %}">
-        ⏰ FU {{ lead.fu_berikutnya.label_hari }}
-      </div>
-      {% endif %}
-    </div>
-  </a>
-  {% else %}
-  <div style="color:#ccc;font-size:12px;text-align:center;padding:16px 0">kosong</div>
+  {% for s in ['Selesai','Lost'] %}
+  {% set cnt = kanban.get(s,[])|length %}
+  {% if cnt > 0 %}
+  <div style="font-size:13px;color:var(--text-2);padding:6px 14px;background:var(--white);border:1px solid var(--border);border-radius:8px">
+    {{ s }}: <strong>{{ cnt }}</strong>
+  </div>
+  {% endif %}
   {% endfor %}
 </div>
-{% endfor %}
+
+{% set col_classes = {
+  'New Lead':'col-new',
+  'Qualify':'col-qualify',
+  'Paket Dipilih':'col-paket',
+  'Invoice Terkirim':'col-invoice',
+  'DP Masuk':'col-dp',
+  'Produksi':'col-produksi',
+  'Selesai':'col-selesai',
+  'Lost':'col-lost'
+} %}
+
+<div class="kanban-board">
+  {% for s in stages %}
+  {% set leads_in_stage = kanban.get(s, []) %}
+  <div class="kanban-col {{ col_classes.get(s,'') }}">
+    <div class="kanban-col-header">
+      <div class="kanban-col-label">{{ s }}</div>
+      <span class="kanban-count">{{ leads_in_stage|length }}</span>
+    </div>
+
+    {% for lead in leads_in_stage %}
+    <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="kanban-card">
+      <div class="k-nama">{{ lead.nama }}</div>
+      <div class="k-sub">{{ lead.no_wa }}</div>
+      {% if lead.jenis_naskah %}
+      <div class="k-sub">{{ lead.jenis_naskah }}{% if lead.tujuan %} · {{ lead.tujuan }}{% endif %}</div>
+      {% endif %}
+      {% if lead.paket %}
+      <div class="k-paket">{{ lead.paket }}</div>
+      {% endif %}
+      {% if lead.fu_berikutnya %}
+      <div class="k-fu {% if lead.fu_berikutnya.terlambat %}late{% else %}soon{% endif %}">
+        <span>⏰</span>
+        <span>FU {{ lead.fu_berikutnya.label_hari }}</span>
+      </div>
+      {% endif %}
+    </a>
+    {% else %}
+    <div class="kanban-empty">kosong</div>
+    {% endfor %}
+
+  </div>
+  {% endfor %}
 </div>
+
 {% endblock %}
