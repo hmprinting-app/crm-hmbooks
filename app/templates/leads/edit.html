@@ -1,71 +1,95 @@
 {% extends "base.html" %}
 {% block title %}Edit {{ lead.nama }}{% endblock %}
-{% block topbar_title %}Edit Lead — {{ lead.nama }}{% endblock %}
+{% block topbar_title %}Edit Lead{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">← Detail</a>
+{% endblock %}
 
 {% block content %}
-<div style="max-width:640px">
-<div class="card">
-  <form method="POST">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="form-group">
-        <label class="form-label">Nama</label>
-        <input class="form-control" name="nama" value="{{ lead.nama }}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nomor WhatsApp</label>
-        <input class="form-control" name="no_wa" value="{{ lead.no_wa }}" required>
-      </div>
+<div style="max-width:660px">
+
+  <!-- Lead identity strip -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--green);flex-shrink:0">
+      {{ lead.nama[0]|upper }}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">{{ lead.nama }}</div>
+      <div style="font-size:12px;color:var(--text-3)">ID: {{ lead.id }} · Edit informasi lead</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:24px">
+    <form method="POST">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label class="form-label">Nama lengkap <span style="color:var(--red)">*</span></label>
+          <input class="form-control" name="nama" value="{{ lead.nama }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nomor WhatsApp <span style="color:var(--red)">*</span></label>
+          <input class="form-control" name="no_wa" value="{{ lead.no_wa }}" required>
+          <div class="form-hint">Format: 62xxx (tanpa tanda +)</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label class="form-label">Jenis Naskah</label>
+          <select class="form-control" name="jenis_naskah">
+            {% for opt in ['Disertasi','Tesis','Monograf','KTI','Lainnya'] %}
+            <option {% if lead.jenis_naskah==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tujuan</label>
+          <select class="form-control" name="tujuan">
+            {% for opt in ['BKD','Jabfung','Keduanya','Pribadi'] %}
+            <option {% if lead.tujuan==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label class="form-label">Paket</label>
+          <select class="form-control" name="paket">
+            <option value="">— belum dipilih —</option>
+            {% for p in paket_list %}
+            <option {% if lead.paket==p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deadline Klien</label>
+          <input class="form-control" name="deadline_klien" value="{{ lead.deadline_klien or '' }}" placeholder="cth: Juni 2025">
+        </div>
+      </div>
+
       <div class="form-group">
-        <label class="form-label">Jenis Naskah</label>
-        <select class="form-control" name="jenis_naskah">
-          {% for opt in ['Disertasi','Tesis','Monograf','KTI','Lainnya'] %}
-          <option {% if lead.jenis_naskah==opt %}selected{% endif %}>{{ opt }}</option>
+        <label class="form-label">Asal Iklan</label>
+        <select class="form-control" name="asal_iklan">
+          {% for opt in ['Meta Ads','CTWA - Meta Ads','Referral','Organik','Lainnya'] %}
+          <option {% if lead.asal_iklan==opt %}selected{% endif %}>{{ opt }}</option>
           {% endfor %}
         </select>
       </div>
+
       <div class="form-group">
-        <label class="form-label">Tujuan</label>
-        <select class="form-control" name="tujuan">
-          {% for opt in ['BKD','Jabfung','Keduanya','Pribadi'] %}
-          <option {% if lead.tujuan==opt %}selected{% endif %}>{{ opt }}</option>
-          {% endfor %}
-        </select>
+        <label class="form-label">Catatan</label>
+        <textarea class="form-control" name="catatan">{{ lead.catatan or '' }}</textarea>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="form-group">
-        <label class="form-label">Paket</label>
-        <select class="form-control" name="paket">
-          <option value="">— pilih —</option>
-          {% for p in paket_list %}
-          <option {% if lead.paket==p %}selected{% endif %}>{{ p }}</option>
-          {% endfor %}
-        </select>
+
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+        <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="btn btn-secondary">Batal</a>
       </div>
-      <div class="form-group">
-        <label class="form-label">Deadline Klien</label>
-        <input class="form-control" name="deadline_klien" value="{{ lead.deadline_klien or '' }}">
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Asal Iklan</label>
-      <select class="form-control" name="asal_iklan">
-        {% for opt in ['Meta Ads','CTWA - Meta Ads','Referral','Organik','Lainnya'] %}
-        <option {% if lead.asal_iklan==opt %}selected{% endif %}>{{ opt }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Catatan</label>
-      <textarea class="form-control" name="catatan">{{ lead.catatan or '' }}</textarea>
-    </div>
-    <div style="display:flex;gap:10px">
-      <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-      <a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="btn btn-secondary">Batal</a>
-    </div>
-  </form>
-</div>
+
+    </form>
+  </div>
+
 </div>
 {% endblock %}
