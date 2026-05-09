@@ -6,7 +6,8 @@
 {% endblock %}
 
 {% block content %}
-<!-- Metric cards -->
+
+<!-- Metric Cards -->
 <div class="metrics-grid">
   <div class="metric-card">
     <div class="metric-label">Total Leads Aktif</div>
@@ -20,89 +21,151 @@
   </div>
   <div class="metric-card">
     <div class="metric-label">Revenue Pipeline</div>
-    <div class="metric-val">Rp {{ "{:,.0f}".format(revenue_pipe).replace(",",".") }}</div>
+    <div class="metric-val" style="font-size:20px">Rp {{ "{:,.0f}".format(revenue_pipe).replace(",",".") }}</div>
     <div class="metric-sub">estimasi pending</div>
   </div>
-  <div class="metric-card">
+  <div class="metric-card {% if fu_hari_ini > 0 %}warn{% endif %}">
     <div class="metric-label">FU Hari Ini</div>
-    <div class="metric-val {% if fu_hari_ini > 0 %}metric-warn{% endif %}">{{ fu_hari_ini }}</div>
+    <div class="metric-val {% if fu_hari_ini > 0 %}warn{% endif %}">{{ fu_hari_ini }}</div>
     <div class="metric-sub">
-      {% if fu_terlambat > 0 %}<span class="fu-hot">⚠ {{ fu_terlambat }} terlambat</span>{% else %}on track{% endif %}
+      {% if fu_terlambat > 0 %}
+        <span class="fu-hot">⚠ {{ fu_terlambat }} terlambat</span>
+      {% else %}
+        on track
+      {% endif %}
     </div>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
-  <!-- Pipeline summary -->
-  <div class="card">
-    <div style="font-size:13px;font-weight:600;margin-bottom:16px">Pipeline Stages</div>
-    {% set colors = {'New Lead':'#dbeafe','Qualify':'#dcfce7','Paket Dipilih':'#fef9c3','Invoice Terkirim':'#fed7aa','DP Masuk':'#fce7f3','Produksi':'#d1fae5','Selesai':'#ede9fe','Lost':'#f1f5f9'} %}
+<!-- Pipeline + FU Pending -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:18px;margin-bottom:18px">
+
+  <!-- Pipeline Stages -->
+  <div class="card" style="padding:18px 20px">
+    <div class="page-section-title" style="margin-bottom:16px">Pipeline Stages</div>
+    {% set colors = {
+      'New Lead':'#dbeafe',
+      'Qualify':'#dcfce7',
+      'Paket Dipilih':'#fef9c3',
+      'Invoice Terkirim':'#fed7aa',
+      'DP Masuk':'#fce7f3',
+      'Produksi':'#d1fae5',
+      'Selesai':'#e8f5ee',
+      'Lost':'#f1f5f9'
+    } %}
+    {% set text_colors = {
+      'New Lead':'#1e40af',
+      'Qualify':'#15803d',
+      'Paket Dipilih':'#92400e',
+      'Invoice Terkirim':'#9a3412',
+      'DP Masuk':'#9d174d',
+      'Produksi':'#065f46',
+      'Selesai':'#0d6e3f',
+      'Lost':'#64748b'
+    } %}
     {% for s in stages %}
     {% set cnt = stage_counts.get(s, 0) %}
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="width:110px;font-size:12px;color:#555">{{ s }}</div>
-      <div style="flex:1;background:#f0f0f0;border-radius:4px;height:22px;overflow:hidden">
-        <div style="height:100%;width:{{ [cnt * 10, 100]|min }}%;background:{{ colors.get(s,'#e8e8e8') }};border-radius:4px;display:flex;align-items:center;padding-left:8px">
-          {% if cnt > 0 %}<span style="font-size:11px;font-weight:600;color:#555">{{ cnt }}</span>{% endif %}
+    {% set max_cnt = stage_counts.values()|max if stage_counts else 1 %}
+    {% set pct = ([cnt * 100 // (max_cnt if max_cnt > 0 else 1), 100]|min) if cnt > 0 else 4 %}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <div style="width:120px;font-size:12px;font-weight:500;color:#52525b;flex-shrink:0">{{ s }}</div>
+      <div style="flex:1;background:#f4f4f5;border-radius:5px;height:24px;overflow:hidden">
+        <div style="height:100%;width:{{ pct }}%;background:{{ colors.get(s,'#e8e8e8') }};border-radius:5px;display:flex;align-items:center;padding-left:10px;transition:width .3s">
+          {% if cnt > 0 %}
+            <span style="font-size:11px;font-weight:700;color:{{ text_colors.get(s,'#555') }}">{{ cnt }}</span>
+          {% endif %}
         </div>
       </div>
-      <div style="width:24px;text-align:right;font-size:12px;color:#888">{{ cnt }}</div>
+      <div style="width:28px;text-align:right;font-size:12px;font-weight:600;color:#a1a1aa">{{ cnt }}</div>
     </div>
     {% endfor %}
   </div>
 
-  <!-- FU pending -->
-  <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:600;margin-bottom:12px">Follow-up Pending</div>
+  <!-- FU Pending -->
+  <div class="card" style="padding:16px 18px">
+    <div class="page-section-title" style="margin-bottom:12px">
+      Follow-up Pending
+      {% if fu_pending %}
+        <span style="background:#fef3dc;color:#d97706;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px">{{ fu_pending|length }}</span>
+      {% endif %}
+    </div>
     {% if fu_pending %}
-      {% for fu in fu_pending %}
-      <div style="border:1px solid #e8e8e8;border-radius:8px;padding:10px 12px;margin-bottom:8px">
-        <div style="font-size:13px;font-weight:500">{{ fu.lead.nama }}</div>
-        <div style="font-size:11px;color:#888;margin-top:2px">{{ fu.label_hari }} — {{ fu.jadwal_kirim.strftime('%d %b') }}</div>
-        <a href="{{ url_for('followup.index') }}" style="font-size:11px;color:#0a7c4a;font-weight:500">Kirim sekarang →</a>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        {% for fu in fu_pending %}
+        <div style="border:1px solid #e4e4e7;border-radius:9px;padding:10px 12px;transition:border-color .15s"
+             onmouseover="this.style.borderColor='#c3e8d4'" onmouseout="this.style.borderColor='#e4e4e7'">
+          <div style="font-size:13px;font-weight:600;color:#18181b">{{ fu.lead.nama }}</div>
+          <div style="font-size:11px;color:#a1a1aa;margin-top:2px">{{ fu.label_hari }} · {{ fu.jadwal_kirim.strftime('%d %b %Y') }}</div>
+          <a href="{{ url_for('followup.index') }}" style="font-size:11px;color:#0d6e3f;font-weight:600;margin-top:5px;display:inline-block">
+            Kirim sekarang →
+          </a>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
     {% else %}
-      <div style="color:#888;font-size:13px">Tidak ada FU pending ✅</div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 0;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">✅</div>
+        <div style="font-size:13px;font-weight:500;color:#52525b">Tidak ada FU pending</div>
+        <div style="font-size:11px;color:#a1a1aa;margin-top:2px">Semua follow-up sudah on track</div>
+      </div>
     {% endif %}
-    <a href="{{ url_for('followup.index') }}" class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%;justify-content:center">Lihat semua FU</a>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f4f4f5">
+      <a href="{{ url_for('followup.index') }}" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center">
+        Lihat semua FU
+      </a>
+    </div>
   </div>
 </div>
 
-<!-- Recent leads -->
-<div class="table-wrap" style="margin-top:20px">
-  <div style="padding:14px 16px;border-bottom:1px solid #e8e8e8;font-size:13px;font-weight:600">
-    Leads Terbaru
-    <a href="{{ url_for('leads.index') }}" style="font-size:12px;color:#0a7c4a;font-weight:400;margin-left:12px">Lihat semua →</a>
+<!-- Recent Leads Table -->
+<div class="table-wrap">
+  <div class="table-header">
+    <div class="table-title">Leads Terbaru</div>
+    <a href="{{ url_for('leads.index') }}" style="font-size:12px;color:#0d6e3f;font-weight:600">Lihat semua →</a>
   </div>
   <table>
-    <thead><tr>
-      <th>ID</th><th>Nama</th><th>No WA</th><th>Naskah</th><th>Stage</th><th>Paket</th><th>FU Berikutnya</th>
-    </tr></thead>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nama</th>
+        <th>No WA</th>
+        <th>Naskah</th>
+        <th>Stage</th>
+        <th>Paket</th>
+        <th>FU Berikutnya</th>
+      </tr>
+    </thead>
     <tbody>
-    {% for lead in recent_leads %}
-    {% set stage_cls = lead.stage.lower().replace(' ','-') %}
-    <tr onclick="location.href='{{ url_for('leads.detail', lead_id=lead.id) }}'" style="cursor:pointer">
-      <td style="font-size:11px;color:#888;font-family:monospace">{{ lead.id }}</td>
-      <td style="font-weight:500">{{ lead.nama }}</td>
-      <td style="font-family:monospace;font-size:12px">{{ lead.no_wa }}</td>
-      <td>{{ lead.jenis_naskah or '—' }}</td>
-      <td>
-        <span class="badge badge-{{ stage_cls }}">{{ lead.stage }}</span>
-      </td>
-      <td>{{ lead.paket or '—' }}</td>
-      <td>
-        {% if lead.fu_berikutnya %}
-          <span class="{% if lead.fu_berikutnya.terlambat %}fu-hot{% else %}fu-warm{% endif %}">
-            {{ lead.fu_berikutnya.label_hari }} ({{ lead.fu_berikutnya.jadwal_kirim.strftime('%d %b') }})
-          </span>
-        {% else %}—{% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="7" style="text-align:center;color:#888;padding:24px">Belum ada leads. <a href="{{ url_for('leads.tambah') }}" style="color:#0a7c4a">Tambah sekarang →</a></td></tr>
-    {% endfor %}
+      {% for lead in recent_leads %}
+      {% set stage_cls = lead.stage.lower().replace(' ','-') %}
+      <tr onclick="location.href='{{ url_for('leads.detail', lead_id=lead.id) }}'">
+        <td style="font-size:11px;color:#a1a1aa;font-family:monospace">{{ lead.id }}</td>
+        <td style="font-weight:600;color:#18181b">{{ lead.nama }}</td>
+        <td style="font-family:monospace;font-size:12px;color:#52525b">{{ lead.no_wa }}</td>
+        <td style="color:#52525b">{{ lead.jenis_naskah or '—' }}</td>
+        <td><span class="badge badge-{{ stage_cls }}">{{ lead.stage }}</span></td>
+        <td style="color:#52525b">{{ lead.paket or '—' }}</td>
+        <td>
+          {% if lead.fu_berikutnya %}
+            <span class="{% if lead.fu_berikutnya.terlambat %}fu-hot{% else %}fu-warm{% endif %}">
+              {{ lead.fu_berikutnya.label_hari }}
+              <span style="font-weight:400;opacity:.8">({{ lead.fu_berikutnya.jadwal_kirim.strftime('%d %b') }})</span>
+            </span>
+          {% else %}
+            <span style="color:#a1a1aa">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center;padding:32px;color:#a1a1aa">
+          Belum ada leads. 
+          <a href="{{ url_for('leads.tambah') }}" style="color:#0d6e3f;font-weight:600">Tambah sekarang →</a>
+        </td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>
+
 {% endblock %}
