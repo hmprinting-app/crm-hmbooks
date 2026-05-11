@@ -1,0 +1,162 @@
+{
+  "name": "HM Books — Follow-up Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "minutes", "minutesInterval": 15}]
+        }
+      },
+      "id": "cron-fu-check",
+      "name": "Cron — Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "v_pending_follow_ups",
+        "limit": 50
+      },
+      "id": "get-pending-fu",
+      "name": "Get Pending Follow-ups",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "supabaseApi": {"id": "supabase-creds", "name": "Supabase HM Books"}
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "PENDING",
+              "operator": {"type": "string", "operation": "equals"}
+            }
+          ]
+        }
+      },
+      "id": "if-has-pending",
+      "name": "Has Pending FUs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tentukan template pesan berdasarkan FU type dan stage\nconst fuType = $json.fu_type;\nconst stage = $json.stage;\nconst nama = $json.nama || 'Bapak/Ibu';\nlet template = $json.message_template || '';\n\n// Personalisasi nama jika ada\ntemplate = template.replace('Pak/Bu', nama !== 'Bapak/Ibu' ? nama.split(' ')[0] : 'Pak/Bu');\n\n// Untuk FU-3, sertakan instruksi untuk kirim foto (owner handle manually atau pakai media send)\nconst requiresMedia = fuType === 'FU-3';\n\nreturn [{\n  json: {\n    fu_id: $json.id,\n    lead_id: $json.lead_id,\n    phone: $json.phone,\n    fu_type: fuType,\n    message: template,\n    requires_media: requiresMedia\n  }\n}];\n"
+      },
+      "id": "build-fu-message",
+      "name": "Build FU Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ $credentials.httpHeaderAuth.value }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "target", "value": "={{ $json.phone }}"},
+            {"name": "message", "value": "={{ $json.message }}"},
+            {"name": "countryCode", "value": "62"}
+          ]
+        }
+      },
+      "id": "send-fu-whatsapp",
+      "name": "Send FU via WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "credentials": {
+        "httpHeaderAuth": {"id": "fonnte-api-key", "name": "Fonnte API Key"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": "public",
+        "table": "follow_up_queue",
+        "where": {
+          "conditions": [
+            {"column": "id", "operator": "eq", "value": "={{ $('Build FU Message').first().json.fu_id }}"}
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {"column": "status", "value": "SENT"},
+            {"column": "sent_at", "value": "={{ new Date().toISOString() }}"}
+          ]
+        }
+      },
+      "id": "mark-fu-sent",
+      "name": "Mark FU as Sent",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "credentials": {
+        "supabaseApi": {"id": "supabase-creds", "name": "Supabase HM Books"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "messages",
+        "fieldsUi": {
+          "values": [
+            {"column": "lead_id", "value": "={{ $('Build FU Message').first().json.lead_id }}"},
+            {"column": "role", "value": "assistant"},
+            {"column": "content", "value": "={{ $('Build FU Message').first().json.message }}"},
+            {"column": "metadata", "value": "={{ JSON.stringify({type: 'follow_up', fu_type: $('Build FU Message').first().json.fu_type}) }}"},
+            {"column": "created_at", "value": "={{ new Date().toISOString() }}"}
+          ]
+        }
+      },
+      "id": "log-fu-message",
+      "name": "Log FU to Messages",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "supabaseApi": {"id": "supabase-creds", "name": "Supabase HM Books"}
+      }
+    }
+  ],
+  "connections": {
+    "Cron — Every 15 Minutes": {
+      "main": [[{"node": "Get Pending Follow-ups", "type": "main", "index": 0}]]
+    },
+    "Get Pending Follow-ups": {
+      "main": [[{"node": "Has Pending FUs?", "type": "main", "index": 0}]]
+    },
+    "Has Pending FUs?": {
+      "main": [
+        [{"node": "Build FU Message", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Build FU Message": {
+      "main": [[{"node": "Send FU via WhatsApp", "type": "main", "index": 0}]]
+    },
+    "Send FU via WhatsApp": {
+      "main": [[{"node": "Mark FU as Sent", "type": "main", "index": 0}]]
+    },
+    "Mark FU as Sent": {
+      "main": [[{"node": "Log FU to Messages", "type": "main", "index": 0}]]
+    }
+  }
+}

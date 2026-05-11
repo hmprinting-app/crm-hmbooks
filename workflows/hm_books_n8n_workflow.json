@@ -1,0 +1,478 @@
+{
+  "name": "HM Books — WhatsApp AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fonnte-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-fonnte",
+      "name": "Webhook — Fonnte Incoming",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize payload dari Fonnte\nconst body = $input.first().json;\n\nconst phone = body.sender || body.phone;\nconst message = body.message || body.text;\nconst timestamp = body.timestamp || Math.floor(Date.now() / 1000);\n\nif (!phone || !message) {\n  throw new Error('Invalid Fonnte payload');\n}\n\n// Deteksi tipe pesan\nconst isMedia = body.file || body.url || body.type === 'image' || body.type === 'document';\n\nreturn [{\n  json: {\n    phone: phone.replace(/[^0-9]/g, ''),\n    message: message,\n    timestamp: timestamp,\n    is_media: isMedia,\n    media_url: body.file || body.url || null,\n    raw: body\n  }\n}];\n"
+      },
+      "id": "normalize-payload",
+      "name": "Normalize Fonnte Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "leads",
+        "where": {
+          "conditions": [
+            {
+              "column": "phone",
+              "operator": "eq",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "get-lead-supabase",
+      "name": "Get Lead from Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-creds",
+          "name": "Supabase HM Books"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const leadData = $('Get Lead from Supabase').first()?.json;\nconst incoming = $('Normalize Fonnte Payload').first().json;\n\nconst isNew = !leadData || !leadData.id;\n\nreturn [{\n  json: {\n    is_new_lead: isNew,\n    lead: isNew ? null : leadData,\n    incoming: incoming\n  }\n}];\n"
+      },
+      "id": "check-lead-exists",
+      "name": "Check Lead Exists",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "new-lead-check",
+              "leftValue": "={{ $json.is_new_lead }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-new-lead",
+      "name": "Is New Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "leads",
+        "columns": "phone, stage, first_contact_at, last_activity_at",
+        "additionalFields": {},
+        "fieldsUi": {
+          "values": [
+            {"column": "phone", "value": "={{ $('Normalize Fonnte Payload').first().json.phone }}"},
+            {"column": "stage", "value": "NEW_LEAD"},
+            {"column": "first_contact_at", "value": "={{ new Date().toISOString() }}"},
+            {"column": "last_activity_at", "value": "={{ new Date().toISOString() }}"}
+          ]
+        }
+      },
+      "id": "create-lead-supabase",
+      "name": "Create Lead in Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1340, 160],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-creds",
+          "name": "Supabase HM Books"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "messages",
+        "where": {
+          "conditions": [
+            {
+              "column": "lead_id",
+              "operator": "eq",
+              "value": "={{ $('Get Lead from Supabase').first()?.json?.id }}"
+            }
+          ]
+        },
+        "sort": {
+          "rules": [{"column": "created_at", "direction": "asc"}]
+        },
+        "limit": 30
+      },
+      "id": "get-chat-history",
+      "name": "Get Chat History",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1340, 440],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-creds",
+          "name": "Supabase HM Books"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge lead info dan history untuk dikirim ke Claude\nconst incoming = $('Normalize Fonnte Payload').first().json;\nconst isNew = $('Check Lead Exists').first().json.is_new_lead;\n\nlet lead, history;\n\nif (isNew) {\n  lead = $('Create Lead in Supabase').first().json;\n  history = [];\n} else {\n  lead = $('Get Lead from Supabase').first().json;\n  const rawHistory = $('Get Chat History').all();\n  history = rawHistory.map(item => ({\n    role: item.json.role,\n    content: item.json.content\n  }));\n}\n\n// Deteksi eskalasi dari pesan baru\nconst msg = incoming.message.toLowerCase();\nconst escalateKeywords = [\n  'telepon', 'video call', 'komplain', 'kecewa', 'tipu',\n  'kembalikan uang', 'refund', 'tidak puas', 'marah'\n];\nconst shouldEscalate = escalateKeywords.some(k => msg.includes(k));\n\n// Build context payload untuk Claude\nconst contextPayload = {\n  lead_id: lead.id,\n  phone: incoming.phone,\n  nama: lead.nama || null,\n  stage: lead.stage || 'NEW_LEAD',\n  history: history,\n  pesan_baru: incoming.message,\n  is_media: incoming.is_media,\n  media_url: incoming.media_url,\n  should_escalate: shouldEscalate\n};\n\nreturn [{ json: contextPayload }];\n"
+      },
+      "id": "build-claude-context",
+      "name": "Build Claude Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1580, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.should_escalate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-escalate",
+      "name": "Should Escalate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "x-api-key", "value": "={{ $credentials.httpHeaderAuth.value }}"},
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "content-type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 500,\n  \"system\": {{ JSON.stringify($('Get System Prompt').first().json.prompt) }},\n  \"messages\": [\n    ...{{ JSON.stringify($json.history) }},\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify('CONTEXT:\\n' + JSON.stringify({lead_id: $json.lead_id, phone: $json.phone, nama: $json.nama, stage: $json.stage}) + '\\n\\nPESAN BARU:\\n' + $json.pesan_baru) }}\n    }\n  ]\n}"
+      },
+      "id": "call-claude-api",
+      "name": "Call Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2020, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "claude-api-key",
+          "name": "Claude API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude response + extract metadata JSON\nconst claudeResp = $input.first().json;\nconst rawText = claudeResp.content?.[0]?.text || '';\n\n// Extract JSON metadata jika ada (di bagian akhir respons)\nlet metadata = {};\nlet replyText = rawText;\n\nconst jsonMatch = rawText.match(/```json\\s*([\\s\\S]*?)```/);\nif (jsonMatch) {\n  try {\n    metadata = JSON.parse(jsonMatch[1]);\n    replyText = rawText.replace(/```json[\\s\\S]*?```/, '').trim();\n  } catch(e) {\n    // JSON parse gagal, pakai raw text saja\n  }\n}\n\nconst context = $('Build Claude Context').first().json;\n\nreturn [{\n  json: {\n    lead_id: context.lead_id,\n    phone: context.phone,\n    reply: replyText,\n    metadata: metadata,\n    new_stage: metadata.stage || context.stage,\n    escalate: metadata.escalate || false,\n    offer_audit: metadata.offer_audit || false,\n    follow_up_trigger: metadata.follow_up_trigger || null,\n    input_tokens: claudeResp.usage?.input_tokens || 0,\n    output_tokens: claudeResp.usage?.output_tokens || 0\n  }\n}];\n"
+      },
+      "id": "parse-claude-response",
+      "name": "Parse Claude Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2240, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ $credentials.httpHeaderAuth.value }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "target", "value": "={{ $json.phone }}"},
+            {"name": "message", "value": "={{ $json.reply }}"},
+            {"name": "countryCode", "value": "62"}
+          ]
+        }
+      },
+      "id": "send-whatsapp-reply",
+      "name": "Send WhatsApp via Fonnte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2460, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fonnte-api-key",
+          "name": "Fonnte API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "messages",
+        "fieldsUi": {
+          "values": [
+            {"column": "lead_id", "value": "={{ $('Parse Claude Response').first().json.lead_id }}"},
+            {"column": "role", "value": "user"},
+            {"column": "content", "value": "={{ $('Build Claude Context').first().json.pesan_baru }}"},
+            {"column": "created_at", "value": "={{ new Date().toISOString() }}"}
+          ]
+        }
+      },
+      "id": "log-user-message",
+      "name": "Log User Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2680, 100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-creds",
+          "name": "Supabase HM Books"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "messages",
+        "fieldsUi": {
+          "values": [
+            {"column": "lead_id", "value": "={{ $('Parse Claude Response').first().json.lead_id }}"},
+            {"column": "role", "value": "assistant"},
+            {"column": "content", "value": "={{ $('Parse Claude Response').first().json.reply }}"},
+            {"column": "metadata", "value": "={{ JSON.stringify($('Parse Claude Response').first().json.metadata) }}"},
+            {"column": "created_at", "value": "={{ new Date().toISOString() }}"}
+          ]
+        }
+      },
+      "id": "log-ai-message",
+      "name": "Log AI Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2680, 220],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-creds",
+          "name": "Supabase HM Books"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": "public",
+        "table": "leads",
+        "where": {
+          "conditions": [
+            {"column": "id", "operator": "eq", "value": "={{ $('Parse Claude Response').first().json.lead_id }}"}
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {"column": "stage", "value": "={{ $('Parse Claude Response').first().json.new_stage }}"},
+            {"column": "last_activity_at", "value": "={{ new Date().toISOString() }}"},
+            {"column": "follow_up_trigger", "value": "={{ $('Parse Claude Response').first().json.follow_up_trigger }}"}
+          ]
+        }
+      },
+      "id": "update-lead-stage",
+      "name": "Update Lead Stage",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2680, 340],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-creds",
+          "name": "Supabase HM Books"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Kirim notifikasi eskalasi ke owner via Fonnte\nconst ctx = $('Build Claude Context').first().json;\nconst OWNER_PHONE = '628xxxxxxxxxx'; // Ganti dengan nomor owner\n\nconst msg = `🚨 ESKALASI DIPERLUKAN\\n\\nLead: ${ctx.phone}\\nNama: ${ctx.nama || 'Belum diketahui'}\\nStage: ${ctx.stage}\\n\\nPesan terakhir:\\n${ctx.pesan_baru}\\n\\nSilakan hubungi langsung.`;\n\nreturn [{ json: { phone: OWNER_PHONE, message: msg } }];\n"
+      },
+      "id": "build-escalation-notif",
+      "name": "Build Escalation Notif",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2020, 440]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ $credentials.httpHeaderAuth.value }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "target", "value": "={{ $json.phone }}"},
+            {"name": "message", "value": "={{ $json.message }}"},
+            {"name": "countryCode", "value": "62"}
+          ]
+        }
+      },
+      "id": "send-escalation-notif",
+      "name": "Send Escalation to Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2240, 440],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fonnte-api-key",
+          "name": "Fonnte API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ $credentials.httpHeaderAuth.value }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "target", "value": "={{ $('Build Claude Context').first().json.phone }}"},
+            {"name": "message", "value": "Baik Pak/Bu, untuk hal ini saya akan hubungkan langsung dengan tim senior kami. Mohon tunggu sebentar, mereka akan segera menghubungi Bapak/Ibu. 🙏"},
+            {"name": "countryCode", "value": "62"}
+          ]
+        }
+      },
+      "id": "send-escalation-reply-to-lead",
+      "name": "Send Escalation Reply to Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2460, 440],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fonnte-api-key",
+          "name": "Fonnte API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"ok\"}"
+      },
+      "id": "webhook-response",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — Fonnte Incoming": {
+      "main": [[{"node": "Normalize Fonnte Payload", "type": "main", "index": 0}]]
+    },
+    "Normalize Fonnte Payload": {
+      "main": [[{"node": "Get Lead from Supabase", "type": "main", "index": 0}]]
+    },
+    "Get Lead from Supabase": {
+      "main": [[{"node": "Check Lead Exists", "type": "main", "index": 0}]]
+    },
+    "Check Lead Exists": {
+      "main": [[{"node": "Is New Lead?", "type": "main", "index": 0}]]
+    },
+    "Is New Lead?": {
+      "main": [
+        [{"node": "Create Lead in Supabase", "type": "main", "index": 0}],
+        [{"node": "Get Chat History", "type": "main", "index": 0}]
+      ]
+    },
+    "Create Lead in Supabase": {
+      "main": [[{"node": "Build Claude Context", "type": "main", "index": 0}]]
+    },
+    "Get Chat History": {
+      "main": [[{"node": "Build Claude Context", "type": "main", "index": 0}]]
+    },
+    "Build Claude Context": {
+      "main": [[{"node": "Should Escalate?", "type": "main", "index": 0}]]
+    },
+    "Should Escalate?": {
+      "main": [
+        [{"node": "Build Escalation Notif", "type": "main", "index": 0}],
+        [{"node": "Call Claude API", "type": "main", "index": 0}]
+      ]
+    },
+    "Call Claude API": {
+      "main": [[{"node": "Parse Claude Response", "type": "main", "index": 0}]]
+    },
+    "Parse Claude Response": {
+      "main": [[{"node": "Send WhatsApp via Fonnte", "type": "main", "index": 0}]]
+    },
+    "Send WhatsApp via Fonnte": {
+      "main": [[
+        {"node": "Log User Message", "type": "main", "index": 0},
+        {"node": "Log AI Message", "type": "main", "index": 0},
+        {"node": "Update Lead Stage", "type": "main", "index": 0}
+      ]]
+    },
+    "Build Escalation Notif": {
+      "main": [[{"node": "Send Escalation to Owner", "type": "main", "index": 0}]]
+    },
+    "Send Escalation to Owner": {
+      "main": [[{"node": "Send Escalation Reply to Lead", "type": "main", "index": 0}]]
+    },
+    "Log User Message": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]},
+    "Log AI Message": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]},
+    "Send Escalation Reply to Lead": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]}
+  }
+}
