@@ -1,0 +1,331 @@
+{
+  "name": "HM Books — WhatsApp AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fonnte-webhook",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook Fonnte",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst phone = (body.sender || body.phone || '').replace(/[^0-9]/g, '');\nconst message = body.message || body.text || '';\nconst isMedia = !!(body.file || body.url);\n\nif (!phone || !message) throw new Error('Invalid payload');\n\nreturn [{ json: { phone, message, isMedia, mediaUrl: body.file || body.url || null } }];"
+      },
+      "id": "2",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, nama, stage, ai_active, is_escalated, fu_cancelled FROM leads WHERE no_wa = '{{ $json.phone }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "3",
+      "name": "Get Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = $('Get Lead').all();\nconst incoming = $('Normalize Payload').first().json;\nconst isNew = leads.length === 0 || !leads[0].json.id;\nconst lead = isNew ? null : leads[0].json;\n\n// Cek eskalasi dari pesan\nconst msg = incoming.message.toLowerCase();\nconst escalateWords = ['telepon','video call','komplain','kecewa','tipu','refund','tidak puas','marah','kembalikan uang'];\nconst shouldEscalate = escalateWords.some(w => msg.includes(w));\n\nreturn [{ json: { isNew, lead, incoming, shouldEscalate } }];"
+      },
+      "id": "4",
+      "name": "Check Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.isNew }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Is New Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (id, nama, no_wa, stage, first_contact_at, last_contact_at, ai_active) VALUES ('HMB-' || UPPER(SUBSTRING(MD5(RANDOM()::TEXT), 1, 6)), 'Unknown', '{{ $('Normalize Payload').first().json.phone }}', 'New Lead', NOW(), NOW(), TRUE) RETURNING id, nama, stage, ai_active, is_escalated, fu_cancelled",
+        "options": {}
+      },
+      "id": "6",
+      "name": "Create Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1340, 160],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT role, content FROM ai_messages WHERE lead_id = '{{ $('Check Lead').first().json.lead.id }}' ORDER BY created_at ASC LIMIT 20",
+        "options": {}
+      },
+      "id": "7",
+      "name": "Get History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1340, 440],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const checkData = $('Check Lead').first().json;\nconst incoming = checkData.incoming;\nlet lead, history;\n\nif (checkData.isNew) {\n  lead = $('Create Lead').first().json;\n  history = [];\n} else {\n  lead = checkData.lead;\n  const rows = $('Get History').all();\n  history = rows.map(r => ({ role: r.json.role, content: r.json.content }));\n}\n\nreturn [{ json: {\n  leadId: lead.id,\n  phone: incoming.phone,\n  nama: lead.nama,\n  stage: lead.stage,\n  history,\n  pesanBaru: incoming.message,\n  shouldEscalate: checkData.shouldEscalate\n}}];"
+      },
+      "id": "8",
+      "name": "Build Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1580, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.shouldEscalate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "9",
+      "name": "Should Escalate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $credentials['Claude API'].value }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 500, system: 'Kamu adalah tim konsultan HM Books Pustaka. Bantu dosen menerbitkan buku ber-ISBN. Tone hangat, akademik, tidak pushy. Maksimal 150 kata. SELALU akhiri dengan 1 pertanyaan. JANGAN sebut harga di pesan pertama. Qualify minimal 2 hal sebelum rekomendasikan paket. Paket: Esensial Rp2.750.000 (14 hari), Akademik Rp3.750.000 (21 hari) - DEFAULT, Guru Besar Rp5.500.000 (14 hari priority). Jika ada sinyal eskalasi (minta telepon, komplain, marah), balas: Baik Pak/Bu, saya hubungkan tim senior kami. Mohon tunggu sebentar.', messages: [...$json.history, { role: 'user', content: 'Lead: ' + $json.nama + ' | Stage: ' + $json.stage + '\\n\\nPesan: ' + $json.pesanBaru }] }) }}",
+        "options": {}
+      },
+      "id": "10",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2020, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Claude API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst text = resp.content?.[0]?.text || 'Maaf, ada gangguan teknis. Mohon coba lagi.';\nconst ctx = $('Build Context').first().json;\n\n// Deteksi stage dari respons\nlet newStage = ctx.stage;\nconst lowerText = text.toLowerCase();\nif (lowerText.includes('audit') || lowerText.includes('kirim naskah')) newStage = 'Qualify';\nif (lowerText.includes('paket') && lowerText.includes('rekomendasikan')) newStage = 'Paket Dipilih';\n\nreturn [{ json: {\n  leadId: ctx.leadId,\n  phone: ctx.phone,\n  reply: text,\n  newStage,\n  pesanUser: ctx.pesanBaru\n}}];"
+      },
+      "id": "11",
+      "name": "Parse Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2240, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ $credentials['Fonnte'].value }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "target", "value": "={{ $json.phone }}" },
+            { "name": "message", "value": "={{ $json.reply }}" },
+            { "name": "countryCode", "value": "62" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "12",
+      "name": "Send WA Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2460, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fonnte"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO ai_messages (lead_id, role, content, created_at) VALUES ('{{ $('Parse Claude').first().json.leadId }}', 'user', '{{ $('Parse Claude').first().json.pesanUser.replace(/'/g, \"''\") }}', NOW()); INSERT INTO ai_messages (lead_id, role, content, created_at) VALUES ('{{ $('Parse Claude').first().json.leadId }}', 'assistant', '{{ $('Parse Claude').first().json.reply.replace(/'/g, \"''\") }}', NOW()); UPDATE leads SET stage = '{{ $('Parse Claude').first().json.newStage }}', last_ai_reply_at = NOW() WHERE id = '{{ $('Parse Claude').first().json.leadId }}'",
+        "options": {}
+      },
+      "id": "13",
+      "name": "Log to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2680, 160],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Build Context').first().json;\nconst ownerPhone = '628XXXXXXXXXXX'; // GANTI dengan nomor WA owner\nconst msg = `🚨 ESKALASI DIPERLUKAN\\n\\nLead: ${ctx.phone}\\nNama: ${ctx.nama}\\nStage: ${ctx.stage}\\n\\nPesan:\\n${ctx.pesanBaru}\\n\\nSilakan hubungi langsung.`;\n\nreturn [{ json: { ownerPhone, msg, leadPhone: ctx.phone } }];"
+      },
+      "id": "14",
+      "name": "Build Escalation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2020, 440]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ $credentials['Fonnte'].value }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "target", "value": "={{ $json.ownerPhone }}" },
+            { "name": "message", "value": "={{ $json.msg }}" },
+            { "name": "countryCode", "value": "62" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "15",
+      "name": "Notify Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2240, 440],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fonnte"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ $credentials['Fonnte'].value }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "target", "value": "={{ $('Build Context').first().json.phone }}" },
+            { "name": "message", "value": "Baik Pak/Bu, untuk hal ini saya hubungkan langsung dengan tim senior kami. Mohon tunggu sebentar, mereka akan segera menghubungi Bapak/Ibu 🙏" },
+            { "name": "countryCode", "value": "62" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "16",
+      "name": "Reply Escalation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2460, 440],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fonnte"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\":\"ok\"}"
+      },
+      "id": "17",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Fonnte": { "main": [[{ "node": "Normalize Payload", "type": "main", "index": 0 }]] },
+    "Normalize Payload": { "main": [[{ "node": "Get Lead", "type": "main", "index": 0 }]] },
+    "Get Lead": { "main": [[{ "node": "Check Lead", "type": "main", "index": 0 }]] },
+    "Check Lead": { "main": [[{ "node": "Is New Lead?", "type": "main", "index": 0 }]] },
+    "Is New Lead?": {
+      "main": [
+        [{ "node": "Create Lead", "type": "main", "index": 0 }],
+        [{ "node": "Get History", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Lead": { "main": [[{ "node": "Build Context", "type": "main", "index": 0 }]] },
+    "Get History": { "main": [[{ "node": "Build Context", "type": "main", "index": 0 }]] },
+    "Build Context": { "main": [[{ "node": "Should Escalate?", "type": "main", "index": 0 }]] },
+    "Should Escalate?": {
+      "main": [
+        [{ "node": "Build Escalation", "type": "main", "index": 0 }],
+        [{ "node": "Call Claude", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call Claude": { "main": [[{ "node": "Parse Claude", "type": "main", "index": 0 }]] },
+    "Parse Claude": { "main": [[{ "node": "Send WA Reply", "type": "main", "index": 0 }]] },
+    "Send WA Reply": { "main": [[{ "node": "Log to DB", "type": "main", "index": 0 }]] },
+    "Log to DB": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Build Escalation": { "main": [[{ "node": "Notify Owner", "type": "main", "index": 0 }]] },
+    "Notify Owner": { "main": [[{ "node": "Reply Escalation", "type": "main", "index": 0 }]] },
+    "Reply Escalation": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
